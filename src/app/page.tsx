@@ -1,69 +1,94 @@
-import Image from "next/image";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/utils/supabase/server";
+import { getHomeData } from "@/lib/home-data";
+import { PhoneFrame } from "@/components/phone-frame";
+import { HomeHeader } from "@/components/home/header";
+import { HomeHero } from "@/components/home/home-hero";
+import { HabitCard, type HabitCardData } from "@/components/home/habit-card";
+import { BottomNav } from "@/components/home/bottom-nav";
+import { EmptyState } from "@/components/home/empty-state";
+import { LogoutButton } from "./logout-button";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+  const data = await getHomeData();
+
+  // 项目 → HabitCard 数据映射（当前 RPC 返回的字段尚未含 theme/今日完成，
+  // 暂用默认 green 主题、completedToday=false 占位）。
+  const habits: HabitCardData[] = data.projects.map((p) => ({
+    id: p.id,
+    title: p.name,
+    theme: "green",
+    currentStreak: p.currentStreak,
+    targetStreak: Math.max(p.maxStreak, p.currentStreak, 1),
+    completedToday: false,
+  }));
+
+  const isEmpty = data.state === "EMPTY";
+  const heroVariant: "active" | "debt" | "completed" =
+    data.state === "DEBT" ? "debt" : "active";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <PhoneFrame variant="home">
+      <main className="flex flex-1 flex-col pb-2">
+        <HomeHeader
+          nickname={data.profile?.nickname}
+          walletBalance={data.profile?.walletBalance ?? 0}
+          debtAmount={data.debtAmount}
+          isEmpty={isEmpty}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        {/* 临时登出入口（放在底部 nav "我的" 真正实现前） */}
+        <div className="flex justify-end px-6 pt-2">
+          <LogoutButton />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+
+        {isEmpty ? (
+          <EmptyState />
+        ) : (
+          <>
+            <HomeHero
+              variant={heroVariant}
+              completed={data.completedToday}
+              total={data.totalToday}
+              streak={data.streak}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            {/* 今日打卡 Section */}
+            <section className="flex flex-col gap-3 px-5 pt-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[22px] font-bold leading-[30px] text-[var(--color-text-primary-2)]">
+                  今日打卡
+                </h2>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {habits.length === 0 ? (
+                  <p className="rounded-2xl bg-white/60 px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
+                    暂无今日打卡项
+                  </p>
+                ) : (
+                  habits.map((habit) => (
+                    <HabitCard key={habit.id} habit={habit} />
+                  ))
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        <div className="mt-4">
+          <BottomNav />
         </div>
       </main>
-    </div>
+    </PhoneFrame>
   );
 }

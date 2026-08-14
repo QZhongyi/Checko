@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
+/*
+ * DailyCheck 设计系统（来源：draft/设计规范及标注.md）
+ * 不跟随系统深色模式——Auth 页面统一浅色基调
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* 颜色 */
+  --color-primary: #22c55e; /* 品牌绿 */
+  --color-primary-bright: #45d62f; /* 渐变末端，按钮高亮 */
+  --color-primary-soft: #e8f7ef; /* 浅绿背景 */
+  --color-primary-icon-bg: #f1faf4; /* 输入框图标底色 */
+  --color-register-bg: #f2fbf6; /* 注册条背景 */
+  --color-register-border: #e7f5ec;
+
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #8a8fa3;
+
+  --color-blue: #1677ff; /* 验证码登录 / 手机快捷 */
+  --color-white: #ffffff;
+
+  --color-border: #f0f1f3; /* 输入框边框 */
+  --color-divider: #e8e9ed; /* 分割线 */
+  --color-vdivider: #ecedef; /* 竖分隔线 */
+
+  /* 首页扩展色（home-ui-spec.md §3） */
+  --color-purple: #8b4dff; /* 阅读项目 */
+  --color-orange: #ff6b00; /* 团队/连续天数火焰 */
+  --color-water-blue: #22a8f2; /* 喝水项目 */
+  --color-debt-red: #ff3b30; /* 负债红 */
+  --color-coin-yellow: #ffc928; /* 金币黄 */
+  --color-fab-yellow: #ffc526; /* 创建按钮黄 */
+  --color-light-green: #eaf9ef; /* Active tab 背景 */
+  --color-nav-inactive: #a8b0ba; /* 底栏未激活 */
+  --color-text-primary-2: #172033; /* 首页主文字（与 #1a1a1a 略不同，按规范）*/
+  --color-text-secondary-2: #7f879a; /* 首页次级文字 */
+
+  /* 圆角 */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+  --radius-pill: 999px;
+
+  /* 页面背景渐变：顶部非常轻微的薄荷绿，向下过渡到白 */
+  --bg-gradient: linear-gradient(
+    180deg,
+    #f1fbf5 0%,
+    #f7fcf9 32%,
+    #ffffff 100%
+  );
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-brand: var(--color-primary);
+  --color-brand-bright: var(--color-primary-bright);
+  --color-brand-soft: var(--color-primary-soft);
+  --color-brand-icon-bg: var(--color-primary-icon-bg);
+  --color-register-bg: var(--color-register-bg);
+  --color-register-border: var(--color-register-border);
+  --color-ink: var(--color-text-primary);
+  --color-ink-soft: var(--color-text-secondary);
+  --color-accent-blue: var(--color-blue);
+  --color-line: var(--color-border);
+  --color-divider: var(--color-divider);
+  --color-vdivider: var(--color-vdivider);
+  --color-canvas: #f7fcf9;
+
+  --color-background: #f7fcf9;
+  --color-foreground: #1a1a1a;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-gradient);
+  color: var(--color-text-primary);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "PingFang SC",
+    "Microsoft YaHei",
+    var(--font-sans),
+    Arial,
+    Helvetica,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
