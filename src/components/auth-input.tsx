@@ -5,12 +5,15 @@ import { Eye, EyeOff } from "lucide-react";
 
 type CommonProps = {
   name: string;
-  type?: "text" | "email" | "password";
+  type?: "text" | "email" | "password" | "number";
   placeholder?: string;
   autoComplete?: string;
   icon: React.ReactNode;
   defaultValue?: string;
   rightAccessory?: React.ReactNode; // 自定义右侧内容（如验证码按钮）
+  maxLength?: number;
+  min?: number;
+  max?: number;
 };
 
 /**
@@ -29,6 +32,9 @@ export function AuthInput({
   icon,
   defaultValue,
   rightAccessory,
+  maxLength,
+  min,
+  max,
 }: CommonProps) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
@@ -50,6 +56,9 @@ export function AuthInput({
         placeholder={placeholder}
         autoComplete={autoComplete}
         defaultValue={defaultValue}
+        maxLength={maxLength}
+        min={min}
+        max={max}
         required
         className="flex-1 bg-transparent text-base font-normal leading-[22px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
       />

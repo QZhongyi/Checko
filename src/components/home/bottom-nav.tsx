@@ -75,7 +75,7 @@ function NavItem({
 function CreateButton() {
   return (
     <Link
-      href="#"
+      href="/create-project"
       aria-label="创建项目"
       className="flex flex-col items-center"
       style={{ transform: "translateY(-12px)" }}

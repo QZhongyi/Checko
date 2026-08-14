@@ -28,7 +28,7 @@ export function EmptyState() {
 
       {/* CTA */}
       <Link
-        href="#"
+        href="/create-project"
         className="mt-8 flex h-[60px] w-full max-w-[310px] items-center justify-center rounded-[28px] text-lg font-semibold text-white shadow-[0_10px_24px_rgba(34,197,94,0.16)] transition active:scale-[0.98]"
         style={{
           background:

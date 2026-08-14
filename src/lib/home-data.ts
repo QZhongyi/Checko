@@ -101,10 +101,20 @@ export async function getHomeData(): Promise<HomeData> {
   };
 
   // 并行拉取 profile + 项目列表
+  // 注意：这两个是 RPC 函数，必须走 .rpc()（PostgREST 不把返回集合的
+  // 函数当表暴露，.from() 会 404 PGRST205 且被 ?? [] 静默吞掉）。
   const [profileRes, projectsRes] = await Promise.all([
-    supabase.from("get_my_profile").select("*").single(),
-    supabase.from("get_visible_project_summaries").select("*"),
+    supabase.rpc("get_my_profile").single(),
+    supabase.rpc("get_visible_project_summaries"),
   ]);
+
+  // RPC 失败时记录错误，避免 DB 故障被静默折算成"空状态"
+  if (profileRes.error) {
+    console.error("get_my_profile 失败:", profileRes.error.message);
+  }
+  if (projectsRes.error) {
+    console.error("get_visible_project_summaries 失败:", projectsRes.error.message);
+  }
 
   const profileRow = profileRes.data as ProfileRow | null;
   const profile: MyProfile | null = profileRow
@@ -149,7 +159,7 @@ export async function getHomeData(): Promise<HomeData> {
     projects,
     completedToday: 0, // TODO
     totalToday: projects.length, // 暂用项目数近似（不准确，后续改）
-    streak: profile?.totalEarned ? 0 : 0, // TODO: streak 概念待与数据库口径对齐
+    streak: 0, // TODO: streak 概念待与数据库口径对齐
     debtAmount: 0, // TODO
   };
 }
