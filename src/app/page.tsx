@@ -19,22 +19,53 @@ export default async function Home() {
     redirect("/auth/login");
   }
 
-  const data = await getHomeData();
+  let data;
+  try {
+    data = await getHomeData();
+  } catch (error) {
+    // 必需 RPC 失败：明确渲染失败态，不降级成空项目/余额 0 等业务状态
+    console.error("首页数据加载失败:", error);
+    return (
+      <PhoneFrame variant="home">
+        <main className="flex flex-1 flex-col items-center justify-center gap-3 px-8 pb-2 text-center">
+          <p className="text-lg font-bold text-[var(--color-text-primary-2)]">
+            首页加载失败
+          </p>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            数据暂时不可用，请稍后刷新重试
+          </p>
+        </main>
+        <div className="mt-4">
+          <BottomNav />
+        </div>
+      </PhoneFrame>
+    );
+  }
 
-  // 项目 → HabitCard 数据映射（当前 RPC 返回的字段尚未含 theme/今日完成，
-  // 暂用默认 green 主题、completedToday=false 占位）。
+  // 项目 → HabitCard 数据映射（今日完成/奖励来自 get_today_checkin_status；
+  // theme 字段尚未入库，暂用默认 green 主题）。
   const habits: HabitCardData[] = data.projects.map((p) => ({
     id: p.id,
     title: p.name,
     theme: "green",
     currentStreak: p.currentStreak,
     targetStreak: Math.max(p.maxStreak, p.currentStreak, 1),
-    completedToday: false,
+    completedToday: p.completedToday,
+    rewardCoins: p.rewardCoins,
+    rewardMode: p.rewardMode,
+    rewardNValue: p.rewardNValue,
+    todayCheckinId: p.todayCheckinId,
+    canRevoke: p.canRevoke,
+    deadlineAt: p.deadlineAt,
   }));
 
   const isEmpty = data.state === "EMPTY";
   const heroVariant: "active" | "debt" | "completed" =
-    data.state === "DEBT" ? "debt" : "active";
+    data.state === "DEBT"
+      ? "debt"
+      : data.state === "ALL_COMPLETED"
+        ? "completed"
+        : "active";
 
   return (
     <PhoneFrame variant="home">

@@ -37,25 +37,14 @@ export async function createProject(
 
   const supabase = await createSupabaseServerClient();
 
-  // Database 类型尚未生成（types.ts 为占位），rpc 参数类型退化为 undefined，
-  // 这里用显式类型在边界处约束（与 home-data.ts 的边界类型转换同一策略）。
-  // 注意：RPC 参数名必须与函数签名一致（snake_case），PostgREST 不做 camelCase 映射。
-  // TODO: supabase gen types 生成 Database 类型后移除 as never 断言。
-  type CreateProjectArgs = {
-    p_name: string;
-    p_project_type: "personal";
-    p_frequency: "daily";
-    p_reward_amount: number;
-    p_penalty_amount: number;
-  };
-  const args: CreateProjectArgs = {
+  // RPC 参数名与函数签名一致（snake_case），由生成的 Database 类型校验
+  const { error } = await supabase.rpc("create_project", {
     p_name: name,
     p_project_type: "personal",
     p_frequency: "daily",
     p_reward_amount: Number(rewardRaw),
     p_penalty_amount: Number(penaltyRaw),
-  };
-  const { error } = await supabase.rpc("create_project", args as never);
+  });
 
   if (error) {
     return { error: error.message };

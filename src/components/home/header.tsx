@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { IllustrationPlaceholder } from "./illustration";
 
 /**
@@ -48,12 +49,14 @@ export function HomeHeader({
         </p>
       </div>
 
-      {/* 右侧：CoinPill */}
-      <CoinPill
-        walletBalance={walletBalance}
-        debtAmount={debtAmount}
-        isEmpty={isEmpty}
-      />
+      {/* 右侧：CoinPill（点击进入小荷包） */}
+      <Link href="/wallet" aria-label="查看小荷包">
+        <CoinPill
+          walletBalance={walletBalance}
+          debtAmount={debtAmount}
+          isEmpty={isEmpty}
+        />
+      </Link>
     </header>
   );
 }
