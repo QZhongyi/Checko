@@ -10,10 +10,11 @@ import { IllustrationPlaceholder } from "./illustration";
 export function EmptyState() {
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-8 py-8">
-      {/* 中央插画占位 ~270×270 */}
+      {/* 中央插画（真实资产就位前的精制替身） */}
       <IllustrationPlaceholder
-        label="疲惫火焰\n花盆 + 小植物\n插画占位"
-        className="h-[260px] w-[270px]"
+        label="空状态插画：花盆与小植物"
+        emoji="🌱"
+        className="h-[260px] w-[270px] text-[96px]"
       />
 
       {/* 标题 */}

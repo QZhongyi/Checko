@@ -19,6 +19,7 @@ export function SignupForm() {
         name="email"
         type="email"
         placeholder="邮箱"
+        label="邮箱"
         autoComplete="email"
         icon={<Mail size={24} />}
       />
@@ -31,6 +32,7 @@ export function SignupForm() {
         name="password"
         type="password"
         placeholder="密码（至少 6 位）"
+        label="密码"
         autoComplete="new-password"
         icon={<KeyRound size={24} />}
       />

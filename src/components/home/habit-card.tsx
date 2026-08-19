@@ -4,7 +4,6 @@ import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
-import { IllustrationPlaceholder } from "./illustration";
 import { rewardLabel } from "@/lib/reward";
 import {
   performCheckin,
@@ -23,8 +22,10 @@ import {
 export type HabitCardData = {
   id: string;
   title: string;
-  // 主题色（purple/green/orange/blue），决定 icon、streak、checkButton 配色
-  theme: "purple" | "green" | "orange" | "blue";
+  /** 项目图标（emoji；空则用默认） */
+  icon: string | null;
+  /** 项目主题色（CSS 颜色值；决定 icon 底、streak、checkButton 配色） */
+  color: string | null;
   currentStreak: number;
   targetStreak: number;
   completedToday: boolean;
@@ -41,15 +42,10 @@ export type HabitCardData = {
   deadlineAt: string;
 };
 
-const THEME_COLORS: Record<HabitCardData["theme"], string> = {
-  purple: "var(--color-purple)",
-  green: "var(--color-primary)",
-  orange: "var(--color-orange)",
-  blue: "var(--color-water-blue)",
-};
+const DEFAULT_THEME_COLOR = "var(--color-primary)";
 
 export function HabitCard({ habit }: { habit: HabitCardData }) {
-  const themeColor = THEME_COLORS[habit.theme];
+  const themeColor = habit.color ?? DEFAULT_THEME_COLOR;
 
   const [checkinState, checkinFormAction] = useActionState<
     CheckinActionState,
@@ -93,11 +89,17 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
         aria-label={`查看 ${habit.title} 详情`}
         className="flex min-w-0 flex-1 gap-3 rounded-2xl active:bg-black/[0.03]"
       >
-      {/* 项目 icon（占位 68×68 圆角 16） */}
-      <IllustrationPlaceholder
-        label={habit.title.slice(0, 4) || "项目"}
-        className="h-[68px] w-[68px] shrink-0 rounded-2xl"
-      />
+      {/* 项目 icon（68×68：项目 icon emoji 或默认，背景带项目色） */}
+      <span
+        aria-hidden
+        className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-2xl text-[34px]"
+        style={{
+          background: `linear-gradient(160deg, ${themeColor}14, ${themeColor}2E)`,
+          border: `1px solid ${themeColor}33`,
+        }}
+      >
+        {habit.icon ?? "📝"}
+      </span>
 
       {/* 内容 */}
       <div className="flex min-w-0 flex-1 flex-col gap-1">

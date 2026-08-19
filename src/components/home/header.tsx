@@ -26,17 +26,19 @@ export function HomeHeader({
   const dateText = formatDate(new Date());
 
   return (
-    <header className="flex items-start justify-between px-6 pt-10">
-      {/* 左侧：问候 */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
+    <header className="flex min-w-0 items-start justify-between gap-2 px-6 pt-10">
+      {/* 左侧：问候（长昵称单行截断） */}
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-center gap-2">
           {/* SunIcon 占位 32×32 */}
           <IllustrationPlaceholder
-            label="☀"
+            label="太阳"
+            emoji="☀️"
             shape="circle"
-            className="h-8 w-8"
+            tone="warm"
+            className="h-8 w-8 text-[18px]"
           />
-          <h1 className="text-2xl font-bold leading-8 text-[var(--color-text-primary-2)]">
+          <h1 className="min-w-0 truncate text-2xl font-bold leading-8 text-[var(--color-text-primary-2)]">
             {greeting}
           </h1>
           {/* WaveIcon 占位 ~28 */}

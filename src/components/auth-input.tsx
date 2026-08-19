@@ -14,6 +14,8 @@ type CommonProps = {
   maxLength?: number;
   min?: number;
   max?: number;
+  /** 持续可见的字段标题（label/htmlFor 关联，P2-3） */
+  label: string;
 };
 
 /**
@@ -35,47 +37,58 @@ export function AuthInput({
   maxLength,
   min,
   max,
+  label,
 }: CommonProps) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (show ? "text" : "password") : type;
+  const inputId = `field-${name}`;
 
   return (
-    <div className="flex h-14 w-full items-center gap-3 rounded-2xl border border-line bg-white px-4 shadow-[0_2px_8px_rgba(0,0,0,0.025)] transition focus-within:border-[var(--color-primary)] focus-within:shadow-[0_2px_8px_rgba(34,197,94,0.12)]">
-      {/* 左侧 icon 容器 40×40 / 圆角 12 / 浅绿底 / icon 24 绿色 */}
-      <span
-        aria-hidden
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--color-primary)]"
-        style={{ background: "var(--color-brand-icon-bg)" }}
+    <div className="w-full">
+      <label
+        htmlFor={inputId}
+        className="mb-1.5 block text-[13px] font-medium text-[var(--color-text-secondary)]"
       >
-        {icon}
-      </span>
-      <input
-        name={name}
-        type={inputType}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        defaultValue={defaultValue}
-        maxLength={maxLength}
-        min={min}
-        max={max}
-        required
-        className="flex-1 bg-transparent text-base font-normal leading-[22px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
-      />
-      {/* 右侧：自定义 accessory 优先，否则密码框自动加眼睛 */}
-      {rightAccessory ? (
-        rightAccessory
-      ) : isPassword ? (
-        <button
-          type="button"
-          onClick={() => setShow((v) => !v)}
-          className="text-[var(--color-text-secondary)] transition hover:text-[var(--color-primary)]"
-          tabIndex={-1}
-          aria-label={show ? "隐藏密码" : "显示密码"}
+        {label}
+      </label>
+      <div className="flex h-14 w-full min-w-0 items-center gap-3 rounded-2xl border border-line bg-white px-4 shadow-[0_2px_8px_rgba(0,0,0,0.025)] transition focus-within:border-[var(--color-primary)] focus-within:shadow-[0_2px_8px_rgba(34,197,94,0.12)]">
+        {/* 左侧 icon 容器 40×40 / 圆角 12 / 浅绿底 / icon 24 绿色 */}
+        <span
+          aria-hidden
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--color-primary)]"
+          style={{ background: "var(--color-brand-icon-bg)" }}
         >
-          {show ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      ) : null}
+          {icon}
+        </span>
+        <input
+          id={inputId}
+          name={name}
+          type={inputType}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          defaultValue={defaultValue}
+          maxLength={maxLength}
+          min={min}
+          max={max}
+          required
+          className="min-w-0 flex-1 bg-transparent text-base font-normal leading-[22px] text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-secondary)]"
+        />
+        {/* 右侧：自定义 accessory 优先，否则密码框自动加眼睛 */}
+        {rightAccessory ? (
+          rightAccessory
+        ) : isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className="shrink-0 text-[var(--color-text-secondary)] transition hover:text-[var(--color-primary)]"
+            tabIndex={-1}
+            aria-label={show ? "隐藏密码" : "显示密码"}
+          >
+            {show ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -107,23 +107,33 @@ function ExpenseSheet({
     <div className="fixed inset-0 z-50 flex justify-center">
       {/* 遮罩 */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* 面板（max-height + 内部滚动：短视口/软键盘弹出时顶部仍可达） */}
-      <div className="absolute bottom-0 left-1/2 max-h-[100dvh] w-full max-w-[430px] -translate-x-1/2 overflow-y-auto rounded-t-[24px] bg-white p-5 pb-8">
+      {/* 面板（max-height + 内部滚动：短视口/软键盘弹出时顶部仍可达）。
+          对话框语义：role/aria-modal/aria-labelledby（P2-2） */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="record-expense-title"
+        className="absolute bottom-0 left-1/2 max-h-[100dvh] w-full max-w-[430px] -translate-x-1/2 overflow-y-auto rounded-t-[24px] bg-white p-5 pb-8"
+      >
         {/* 抓取条 + 头部 */}
         <div className="mx-auto h-1.5 w-10 rounded-full bg-[#E5E7EB]" />
         <div className="mt-3 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
+            autoFocus
             aria-label="关闭"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F3F4F6] text-[var(--color-text-secondary)]"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F4F6] text-[var(--color-text-secondary)]"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
-          <h3 className="text-[17px] font-bold text-[var(--color-text-primary-2)]">
+          <h3
+            id="record-expense-title"
+            className="text-[17px] font-bold text-[var(--color-text-primary-2)]"
+          >
             记一笔
           </h3>
-          <span className="w-8" />
+          <span className="w-10" />
         </div>
 
         <form action={formAction} className="mt-4 flex flex-col gap-4">
@@ -139,15 +149,15 @@ function ExpenseSheet({
             }}
           >
             <p
-              className={`text-xs font-medium ${invalid ? "text-[var(--color-debt-red)]" : "text-white/90"}`}
+              className={`text-xs font-medium ${invalid ? "text-[var(--color-debt-red)]" : "text-[#5B4200]"}`}
             >
               {invalid ? "⚠️ 金额无效或余额不足" : "当前余额"}
             </p>
-            <p className="mt-1 text-[26px] font-bold leading-8 text-white">
+            <p className="mt-1 text-[26px] font-bold leading-8 text-[#3D2E00]">
               🪙 {balance}
             </p>
             {amount.trim() !== "" && !invalid ? (
-              <p className="mt-1 text-sm font-medium text-white/90">
+              <p className="mt-1 text-sm font-medium text-[#5B4200]">
                 记录后余额 🪙 {after}
               </p>
             ) : null}

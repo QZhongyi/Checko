@@ -8,8 +8,8 @@
   color-scheme: light;
 
   /* 颜色 */
-  --color-primary: #22c55e; /* 品牌绿 */
-  --color-primary-bright: #45d62f; /* 渐变末端，按钮高亮 */
+  --color-primary: #16a34a; /* 品牌绿 */
+  --color-primary-bright: #22c55e; /* 渐变末端，按钮高亮 */
   --color-primary-soft: #e8f7ef; /* 浅绿背景 */
   --color-primary-icon-bg: #f1faf4; /* 输入框图标底色 */
   --color-register-bg: #f2fbf6; /* 注册条背景 */

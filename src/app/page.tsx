@@ -42,12 +42,12 @@ export default async function Home() {
     );
   }
 
-  // 项目 → HabitCard 数据映射（今日完成/奖励来自 get_today_checkin_status；
-  // theme 字段尚未入库，暂用默认 green 主题）。
+  // 项目 → HabitCard 数据映射（icon/color 来自项目行，无则用卡片默认色）。
   const habits: HabitCardData[] = data.projects.map((p) => ({
     id: p.id,
     title: p.name,
-    theme: "green",
+    icon: p.icon,
+    color: p.color,
     currentStreak: p.currentStreak,
     targetStreak: Math.max(p.maxStreak, p.currentStreak, 1),
     completedToday: p.completedToday,
@@ -69,7 +69,7 @@ export default async function Home() {
 
   return (
     <PhoneFrame variant="home">
-      <main className="flex flex-1 flex-col pb-2">
+      <main className="flex flex-1 flex-col pb-24">
         <HomeHeader
           nickname={data.profile?.nickname}
           walletBalance={data.profile?.walletBalance ?? 0}
@@ -116,9 +116,8 @@ export default async function Home() {
           </>
         )}
 
-        <div className="mt-4">
-          <BottomNav />
-        </div>
+        {/* 底部导航：绝对定位常驻视口（PhoneFrame relative），内容预留底部空间 */}
+        <BottomNav />
       </main>
     </PhoneFrame>
   );

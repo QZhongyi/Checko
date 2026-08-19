@@ -55,28 +55,28 @@ export default async function WalletPage() {
           }}
         >
           <div className="flex items-start justify-between">
-            <p className="text-[13px] font-medium text-white/90">
+            <p className={`text-[13px] font-medium ${inDebt ? "text-white" : "text-[#5B4200]"}`}>
               {inDebt ? "待偿还" : "当前余额"} 🪙
             </p>
-            <span className="rounded-full bg-white/25 px-2.5 py-1 text-xs font-bold text-white">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${inDebt ? "bg-white/25 text-white" : "bg-white/40 text-[#5B4200]"}`}>
               {inDebt ? "💨 连续中断" : "🔥 坚持打卡"}
             </span>
           </div>
-          <p className="mt-2 text-[48px] font-bold leading-[56px] text-white">
+          <p className={`mt-2 text-[48px] font-bold leading-[56px] ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
             {inDebt ? `-${Math.abs(data.balance)}` : data.balance}
           </p>
 
           {/* 本月双栏 */}
           <div className="mt-4 flex gap-8">
             <div>
-              <p className="text-xs font-medium text-white/80">本月获得</p>
-              <p className="mt-0.5 text-[18px] font-bold text-white">
+              <p className={`text-xs font-medium ${inDebt ? "text-white/85" : "text-[#5B4200]"}`}>本月获得</p>
+              <p className={`mt-0.5 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
                 +{data.monthEarned} 🪙
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-white/80">本月消费</p>
-              <p className="mt-0.5 text-[18px] font-bold text-white">
+              <p className={`text-xs font-medium ${inDebt ? "text-white/85" : "text-[#5B4200]"}`}>本月消费</p>
+              <p className={`mt-0.5 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
                 -{data.monthSpent} 🪙
               </p>
             </div>

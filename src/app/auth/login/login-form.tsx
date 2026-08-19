@@ -19,6 +19,7 @@ export function LoginForm() {
         name="email"
         type="email"
         placeholder="手机号 / 邮箱"
+        label="账号"
         autoComplete="email"
         icon={<Mail size={24} />}
       />
@@ -31,6 +32,7 @@ export function LoginForm() {
         name="password"
         type="password"
         placeholder="密码"
+        label="密码"
         autoComplete="current-password"
         icon={<KeyRound size={24} />}
       />

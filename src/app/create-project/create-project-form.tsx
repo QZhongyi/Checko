@@ -32,6 +32,7 @@ export function CreateProjectForm() {
         name="name"
         type="text"
         placeholder="项目名称（1-30 字）"
+        label="项目名称"
         maxLength={30}
         icon={<Pencil size={24} />}
       />
@@ -43,6 +44,7 @@ export function CreateProjectForm() {
         name="rewardAmount"
         type="number"
         placeholder="奖励金额，如：5"
+        label="奖励金额（每次打卡奖励的金币）"
         min={0}
         max={999}
         icon={<Coins size={24} />}
@@ -55,6 +57,7 @@ export function CreateProjectForm() {
         name="penaltyAmount"
         type="number"
         placeholder="惩罚金额（默认 0）"
+        label="惩罚金额（缺卡一天扣除的金币）"
         defaultValue="0"
         min={0}
         max={999}
