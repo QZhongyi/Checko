@@ -1240,6 +1240,28 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_friends: {
+        Args: never
+        Returns: {
+          avatar: string
+          nickname: string
+          streak: number
+          today_completed: number
+          today_total: number
+          user_id: string
+        }[]
+      }
+      get_my_friendships: {
+        Args: never
+        Returns: {
+          avatar: string
+          direction: string
+          friendship_id: string
+          nickname: string
+          requested_at: string
+          user_id: string
+        }[]
+      }
       get_my_month_summary: {
         Args: { p_month_start: string }
         Returns: {
@@ -1378,6 +1400,15 @@ export type Database = {
       revoke_checkin: {
         Args: { p_checkin_id: string; p_reason?: string }
         Returns: undefined
+      }
+      search_users: {
+        Args: { p_email: string }
+        Returns: {
+          avatar: string
+          nickname: string
+          relation: string
+          user_id: string
+        }[]
       }
       update_expense: {
         Args: {

@@ -1,35 +1,40 @@
 import Link from "next/link";
+import { Home, Users, Trophy, User, Plus } from "lucide-react";
 
 /**
  * 底部导航（home-ui-spec.md §6）
  *
- * 五项：Home（active）/ Social / CreateButton / Achievement / Profile
- * - 由页面壳以 sticky 常驻视口底部（含安全区）
- * - 每项带可见短标签
- * - 未实现页面（好友/成就/我的）呈现明确的不可用状态，不用 href="#"
+ * 五项：Home / Social / CreateButton / Achievement / Profile
+ * - 由页面壳以 fixed 常驻视口底部（含安全区）
+ * - 每项带可见短标签；当前页由 active prop 标记
+ * - 未实现页面（成就）呈现明确的不可用状态，不用 href="#"
  */
-export function BottomNav() {
+export function BottomNav({
+  active = "home",
+}: {
+  active?: "home" | "friends" | "profile";
+}) {
   return (
     <nav
       className="fixed bottom-3 left-1/2 z-20 flex h-[70px] w-[min(430px-2rem,100vw-2rem)] -translate-x-1/2 items-center justify-around rounded-[30px] bg-white px-2 shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
       aria-label="主导航"
     >
-      <NavItem label="首页" href="/" active>
-        <HomeIcon />
+      <NavItem label="首页" href="/" active={active === "home"}>
+        <Home size={26} fill="currentColor" strokeWidth={0} />
       </NavItem>
 
-      <NavItem label="好友" disabled>
-        <SocialIcon />
+      <NavItem label="好友" href="/friends" active={active === "friends"}>
+        <Users size={26} />
       </NavItem>
 
       <CreateButton />
 
       <NavItem label="成就" disabled>
-        <TrophyIcon />
+        <Trophy size={26} />
       </NavItem>
 
-      <NavItem label="我的" disabled>
-        <UserIcon />
+      <NavItem label="我的" href="/profile" active={active === "profile"}>
+        <User size={26} />
       </NavItem>
     </nav>
   );
@@ -106,61 +111,13 @@ function CreateButton() {
           boxShadow: "0 8px 20px rgba(255,184,0,0.35)",
         }}
       >
-        <span className="text-[40px] font-light leading-none text-white">
-          +
-        </span>
+        <Plus
+          size={40}
+          strokeWidth={1.5}
+          className="text-white leading-none"
+        />
       </span>
     </Link>
   );
 }
 
-/* 图标（lucide-react 简单替代） */
-function HomeIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-function SocialIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="2" />
-      <circle cx="16" cy="11" r="2.8" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M3 20c0-3 2.7-5 6-5s6 2 6 5M14 20c0-2 1.5-4 4-4s4 2 4 4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-function TrophyIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M7 4h10v3a5 5 0 0 1-10 0V4zM5 5H3v2a3 3 0 0 0 3 3M19 5h2v2a3 3 0 0 1-3 3M9 14h6l1 4h-3l-.5 2h-2L10 18H8l1-4z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-function UserIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M4 21c0-4 4-6 8-6s8 2 8 6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}

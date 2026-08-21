@@ -7,7 +7,6 @@ import { HomeHero } from "@/components/home/home-hero";
 import { HabitCard, type HabitCardData } from "@/components/home/habit-card";
 import { BottomNav } from "@/components/home/bottom-nav";
 import { EmptyState } from "@/components/home/empty-state";
-import { LogoutButton } from "./logout-button";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
@@ -77,11 +76,6 @@ export default async function Home() {
           isEmpty={isEmpty}
         />
 
-        {/* 临时登出入口（放在底部 nav "我的" 真正实现前） */}
-        <div className="flex justify-end px-6 pt-2">
-          <LogoutButton />
-        </div>
-
         {isEmpty ? (
           <EmptyState />
         ) : (
@@ -117,7 +111,7 @@ export default async function Home() {
         )}
 
         {/* 底部导航：绝对定位常驻视口（PhoneFrame relative），内容预留底部空间 */}
-        <BottomNav />
+        <BottomNav active="home" />
       </main>
     </PhoneFrame>
   );
