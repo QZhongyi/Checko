@@ -1169,6 +1169,7 @@ export type Database = {
           p_deadline_time?: string
           p_description?: string
           p_frequency: Database["public"]["Enums"]["project_frequency_type"]
+          p_icon?: string
           p_makeup_count?: number
           p_makeup_reward_mode?: Database["public"]["Enums"]["makeup_reward_mode_type"]
           p_makeup_reward_ratio?: number

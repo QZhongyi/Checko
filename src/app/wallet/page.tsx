@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { getWalletData } from "@/lib/wallet-data";
 import { PhoneFrame } from "@/components/phone-frame";
 import { TransactionList } from "@/components/wallet/transaction-list";
+import { CoinIcon } from "@/components/ui/coin-icon";
 import { WalletActions } from "./record-expense-sheet";
 
 export default async function WalletPage() {
@@ -55,8 +56,8 @@ export default async function WalletPage() {
           }}
         >
           <div className="flex items-start justify-between">
-            <p className={`text-[13px] font-medium ${inDebt ? "text-white" : "text-[#5B4200]"}`}>
-              {inDebt ? "待偿还" : "当前余额"} 🪙
+            <p className={`flex items-center gap-1 text-[13px] font-medium ${inDebt ? "text-white" : "text-[#5B4200]"}`}>
+              {inDebt ? "待偿还" : "当前余额"} <CoinIcon size={13} />
             </p>
             <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${inDebt ? "bg-white/25 text-white" : "bg-white/40 text-[#5B4200]"}`}>
               {inDebt ? "💨 连续中断" : "🔥 坚持打卡"}
@@ -70,14 +71,14 @@ export default async function WalletPage() {
           <div className="mt-4 flex gap-8">
             <div>
               <p className={`text-xs font-medium ${inDebt ? "text-white/85" : "text-[#5B4200]"}`}>本月获得</p>
-              <p className={`mt-0.5 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
-                +{data.monthEarned} 🪙
+              <p className={`mt-0.5 flex items-center gap-1 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
+                +{data.monthEarned} <CoinIcon size={15} />
               </p>
             </div>
             <div>
               <p className={`text-xs font-medium ${inDebt ? "text-white/85" : "text-[#5B4200]"}`}>本月消费</p>
-              <p className={`mt-0.5 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
-                -{data.monthSpent} 🪙
+              <p className={`mt-0.5 flex items-center gap-1 text-[18px] font-bold ${inDebt ? "text-white" : "text-[#3D2E00]"}`}>
+                -{data.monthSpent} <CoinIcon size={15} />
               </p>
             </div>
           </div>
@@ -134,8 +135,8 @@ function TopBar() {
       >
         <ChevronLeft size={24} />
       </Link>
-      <h1 className="text-[20px] font-bold leading-7 text-[var(--color-text-primary-2)]">
-        小荷包 🪙
+      <h1 className="flex items-center gap-1.5 text-[20px] font-bold leading-7 text-[var(--color-text-primary-2)]">
+        小荷包 <CoinIcon size={18} />
       </h1>
     </header>
   );

@@ -1,4 +1,5 @@
 import type { LeaderboardEntry } from "@/lib/friend-data";
+import { CoinIcon } from "@/components/ui/coin-icon";
 
 /**
  * 好友排行榜 tab（server component，纯展示）：
@@ -69,13 +70,13 @@ export function RankTab({
                 ) : null}
               </span>
               <span
-                className={`shrink-0 text-[15px] font-bold ${
+                className={`flex shrink-0 items-center gap-1 text-[15px] font-bold ${
                   entry.walletBalance >= 0
                     ? "text-[var(--color-text-primary-2)]"
                     : "text-[var(--color-debt-red)]"
                 }`}
               >
-                🪙 {entry.walletBalance}
+                <CoinIcon size={14} /> {entry.walletBalance}
               </span>
             </li>
           );

@@ -3,7 +3,10 @@
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, Loader2 } from "lucide-react";
+import { habitIconByKey, matchHabitIcon } from "./habit-icons";
+import { CoinIcon } from "@/components/ui/coin-icon";
 import { rewardLabel } from "@/lib/reward";
 import {
   performCheckin,
@@ -22,7 +25,7 @@ import {
 export type HabitCardData = {
   id: string;
   title: string;
-  /** 项目图标（emoji；空则用默认） */
+  /** 项目图标（创建时选择的插画 key，如 "book"；老项目可能为 emoji 或空） */
   icon: string | null;
   /** 项目主题色（CSS 颜色值；决定 icon 底、streak、checkButton 配色） */
   color: string | null;
@@ -46,6 +49,9 @@ const DEFAULT_THEME_COLOR = "var(--color-primary)";
 
 export function HabitCard({ habit }: { habit: HabitCardData }) {
   const themeColor = habit.color ?? DEFAULT_THEME_COLOR;
+  // 插画解析：创建时选择的 icon key 优先；未选的老项目按名称关键词兜底
+  const illustration =
+    habitIconByKey(habit.icon) ?? matchHabitIcon(habit.title);
 
   const [checkinState, checkinFormAction] = useActionState<
     CheckinActionState,
@@ -89,17 +95,26 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
         aria-label={`查看 ${habit.title} 详情`}
         className="flex min-w-0 flex-1 gap-3 rounded-2xl active:bg-black/[0.03]"
       >
-      {/* 项目 icon（68×68：项目 icon emoji 或默认，背景带项目色） */}
-      <span
-        aria-hidden
-        className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-2xl text-[34px]"
-        style={{
-          background: `linear-gradient(160deg, ${themeColor}14, ${themeColor}2E)`,
-          border: `1px solid ${themeColor}33`,
-        }}
-      >
-        {habit.icon ?? "📝"}
-      </span>
+      {/* 项目 icon（插画资产自带彩色底板；未命中时 emoji + 项目色渐变底） */}
+      {illustration ? (
+        <span
+          aria-hidden
+          className="flex h-[68px] w-[68px] shrink-0 items-center justify-center"
+        >
+          <Image src={illustration} alt="" width={52} height={52} />
+        </span>
+      ) : (
+        <span
+          aria-hidden
+          className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-2xl text-[34px]"
+          style={{
+            background: `linear-gradient(160deg, ${themeColor}14, ${themeColor}2E)`,
+            border: `1px solid ${themeColor}33`,
+          }}
+        >
+          {habit.icon ?? "📝"}
+        </span>
+      )}
 
       {/* 内容 */}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -126,8 +141,9 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
 
         {/* 可选 reward（按奖励模式生成准确文案；every_n/completed 不在打卡时即时发奖） */}
         {habit.rewardCoins ? (
-          <p className="text-[13px] font-medium text-[var(--color-debt-red)]">
+          <p className="flex items-center gap-1 text-[13px] font-medium text-[var(--color-debt-red)]">
             {rewardLabel(habit.rewardMode ?? "every_time", habit.rewardCoins, habit.rewardNValue ?? null)}
+            <CoinIcon size={13} />
           </p>
         ) : null}
 

@@ -1,0 +1,67 @@
+{
+  "sun": {
+    "file": "sun.png",
+    "width": 88,
+    "height": 90
+  },
+  "coin": {
+    "file": "coin.png",
+    "width": 58,
+    "height": 60
+  },
+  "smiling-flame": {
+    "file": "smiling-flame.png",
+    "width": 208,
+    "height": 279
+  },
+  "small-flame": {
+    "file": "small-flame.png",
+    "width": 45,
+    "height": 58
+  },
+  "completion-rays-left": {
+    "file": "completion-rays-left.png",
+    "width": 36,
+    "height": 61
+  },
+  "completion-rays-right": {
+    "file": "completion-rays-right.png",
+    "width": 36,
+    "height": 61
+  },
+  "book": {
+    "file": "book.png",
+    "width": 150,
+    "height": 140
+  },
+  "dumbbell": {
+    "file": "dumbbell.png",
+    "width": 150,
+    "height": 142
+  },
+  "target": {
+    "file": "target.png",
+    "width": 150,
+    "height": 163
+  },
+  "water-glass": {
+    "file": "water-glass.png",
+    "width": 150,
+    "height": 135
+  },
+  "avatar-blue-male": {
+    "file": "avatar-blue-male.png",
+    "width": 67,
+    "height": 68
+  },
+  "avatar-purple-female": {
+    "file": "avatar-purple-female.png",
+    "width": 66,
+    "height": 68
+  },
+  "avatar-yellow-female": {
+    "file": "avatar-yellow-female.png",
+    "width": 67,
+    "height": 68
+  }
+}

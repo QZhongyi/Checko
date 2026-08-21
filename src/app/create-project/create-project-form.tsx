@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import Image from "next/image";
 import {
   Pencil,
   Coins,
@@ -13,12 +14,16 @@ import {
   type CreateProjectFormState,
 } from "@/app/create-project/actions";
 import { AuthInput } from "@/components/auth-input";
+import { HABIT_ICONS } from "@/components/home/habit-icons";
 
 export function CreateProjectForm() {
   const [state, action, pending] = useActionState<
     CreateProjectFormState,
     FormData
   >(createProject, undefined);
+
+  // 项目图标：空 = 未选择（首页按名称关键词兜底匹配）
+  const [icon, setIcon] = useState("");
 
   return (
     <form action={action} className="flex flex-col">
@@ -36,6 +41,35 @@ export function CreateProjectForm() {
         maxLength={30}
         icon={<Pencil size={24} />}
       />
+
+      <div className="h-4" />
+
+      {/* 项目图标选择（插画资产自带彩色底板） */}
+      <div className="flex h-auto w-full flex-col gap-2 rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.025)]">
+        <span className="text-sm text-[var(--color-text-secondary)]">
+          项目图标
+        </span>
+        <input type="hidden" name="icon" value={icon} />
+        <div className="flex items-center gap-2 py-1">
+          <IconOption
+            selected={icon === ""}
+            onSelect={() => setIcon("")}
+            ariaLabel="默认图标"
+          >
+            <span className="text-[26px] leading-none">📝</span>
+          </IconOption>
+          {Object.entries(HABIT_ICONS).map(([key, { image, label }]) => (
+            <IconOption
+              key={key}
+              selected={icon === key}
+              onSelect={() => setIcon(key)}
+              ariaLabel={`${label}图标`}
+            >
+              <Image src={image} alt="" width={34} height={34} />
+            </IconOption>
+          ))}
+        </div>
+      </div>
 
       <div className="h-4" />
 
@@ -104,5 +138,34 @@ export function CreateProjectForm() {
         {pending ? "创建中…" : "创建项目"}
       </button>
     </form>
+  );
+}
+
+/** 图标选项按钮（原生按钮语义 + aria-pressed，选中态高亮） */
+function IconOption({
+  selected,
+  onSelect,
+  ariaLabel,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-label={ariaLabel}
+      aria-pressed={selected}
+      className={`flex h-12 w-12 items-center justify-center rounded-2xl transition active:scale-95 ${
+        selected
+          ? "bg-[var(--color-brand-icon-bg)] ring-2 ring-[var(--color-primary)]"
+          : "bg-[#F5F6F8]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

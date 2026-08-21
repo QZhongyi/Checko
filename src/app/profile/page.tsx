@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { getProfileData } from "@/lib/profile-data";
 import { PhoneFrame } from "@/components/phone-frame";
 import { BottomNav } from "@/components/home/bottom-nav";
+import { CoinIcon } from "@/components/ui/coin-icon";
 import { LogoutButton } from "@/app/logout-button";
 import { NicknameEditor } from "./nickname-editor";
 import { VisibilitySwitch } from "./visibility-switch";
@@ -69,8 +70,8 @@ export default async function ProfilePage() {
             <h2 className="text-[16px] font-bold text-[var(--color-text-primary-2)]">
               小荷包概览
             </h2>
-            <p className="text-[13px] font-medium text-[var(--color-text-secondary)]">
-              余额 🪙 {data?.walletBalance ?? 0}
+            <p className="flex items-center gap-1 text-[13px] font-medium text-[var(--color-text-secondary)]">
+              余额 <CoinIcon size={13} /> {data?.walletBalance ?? 0}
             </p>
           </div>
           <div className="mt-3 grid grid-cols-3 divide-x divide-[#F3F4F6]">

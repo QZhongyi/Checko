@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, Loader2 } from "lucide-react";
+import { CoinIcon } from "@/components/ui/coin-icon";
 import {
   performCheckin,
   revokeCheckin,
@@ -153,7 +154,12 @@ function SubmitButton({ rewardAmount }: { rewardAmount: number }) {
       ) : (
         <>
           打卡
-          {rewardAmount > 0 ? <span>+{rewardAmount} 🪙</span> : null}
+          {rewardAmount > 0 ? (
+            <span className="flex items-center gap-0.5">
+              +{rewardAmount}
+              <CoinIcon size={15} />
+            </span>
+          ) : null}
         </>
       )}
     </button>

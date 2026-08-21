@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { IllustrationPlaceholder } from "./illustration";
+import Image from "next/image";
+import sunIcon from "@/assets/images/home-complete/sun.png";
+import { CoinIcon } from "@/components/ui/coin-icon";
 
 /**
  * 首页 Header（home-ui-spec.md §5）
@@ -30,15 +32,9 @@ export function HomeHeader({
       {/* 左侧：问候（长昵称单行截断） */}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-2">
-          {/* SunIcon 占位 32×32 */}
-          <IllustrationPlaceholder
-            label="太阳"
-            emoji="☀️"
-            shape="circle"
-            tone="warm"
-            className="h-8 w-8 text-[18px]"
-          />
-          <h1 className="min-w-0 truncate text-2xl font-bold leading-8 text-[var(--color-text-primary-2)]">
+          {/* 当前时间段氛围图标（设计稿太阳） */}
+          <Image src={sunIcon} alt="" width={31} height={32} priority />
+          <h1 className="min-w-0 truncate text-xl font-bold leading-8 text-[var(--color-text-primary-2)]">
             {greeting}
           </h1>
           {/* WaveIcon 占位 ~28 */}
@@ -83,7 +79,7 @@ function CoinPill({
         }}
       >
         <span className="text-xs font-medium">待偿还</span>
-        <span aria-hidden>🪙</span>
+        <CoinIcon size={16} />
         <span className="text-lg font-bold leading-none">
           {debtAmount}
         </span>
@@ -94,10 +90,7 @@ function CoinPill({
   if (isEmpty) {
     return (
       <div className="flex h-12 min-w-[88px] items-center gap-1.5 rounded-[22px] bg-white px-4 shadow-[0_6px_18px_rgba(0,0,0,0.05)]">
-        <span
-          aria-hidden
-          className="inline-block h-5 w-5 rounded-full bg-[#D8DBE0] grayscale"
-        />
+        <CoinIcon size={20} className="grayscale opacity-50" />
         <span className="text-sm font-bold text-[#707789]">0 金币</span>
       </div>
     );
@@ -105,13 +98,7 @@ function CoinPill({
 
   return (
     <div className="flex h-12 min-w-[88px] items-center gap-1.5 rounded-[22px] bg-white px-4 shadow-[0_6px_18px_rgba(0,0,0,0.05)]">
-      {/* CoinIcon 占位 32×32 */}
-      <span
-        aria-hidden
-        className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-coin-yellow)] text-[10px]"
-      >
-        🪙
-      </span>
+      <CoinIcon size={20} />
       <span className="text-lg font-bold leading-none text-[var(--color-text-primary-2)]">
         {walletBalance}
       </span>

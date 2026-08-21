@@ -1,4 +1,5 @@
 import type { TransactionItem, TxType } from "@/lib/wallet-data";
+import { CoinIcon } from "@/components/ui/coin-icon";
 
 /**
  * 交易记录列表（纯展示，按 DAL 预格式化的 dayLabel 分组）
@@ -7,7 +8,7 @@ import type { TransactionItem, TxType } from "@/lib/wallet-data";
  * 日期与时间标签均由服务端按用户时区（profile.timezone）格式化，
  * 消费项按其 expense_date 展示
  */
-function metaOf(tx: TransactionItem): { icon: string; label: string; bg: string } {
+function metaOf(tx: TransactionItem): { icon: string; coin?: boolean; label: string; bg: string } {
   if (tx.type === "adjustment") {
     switch (tx.reason) {
       case "expense_delta_negative":
@@ -22,8 +23,8 @@ function metaOf(tx: TransactionItem): { icon: string; label: string; bg: string 
         return { icon: "✏️", label: "更正", bg: "#F1E9FF" };
     }
   }
-  const base: Record<TxType, { icon: string; label: string; bg: string }> = {
-    reward: { icon: "🪙", label: "打卡奖励", bg: "var(--color-primary-soft)" },
+  const base: Record<TxType, { icon: string; coin?: boolean; label: string; bg: string }> = {
+    reward: { icon: "", coin: true, label: "打卡奖励", bg: "var(--color-primary-soft)" },
     penalty: { icon: "⚠️", label: "缺卡惩罚", bg: "#FFEBEA" },
     expense: { icon: "🛒", label: "消费", bg: "#E8F5FE" },
     adjustment: { icon: "✏️", label: "更正", bg: "#F1E9FF" },
@@ -74,11 +75,16 @@ export function TransactionList({
             <h3 className="text-[15px] font-bold text-[var(--color-text-primary-2)]">
               {group.day}
             </h3>
-            <span className="text-xs text-[var(--color-text-secondary)]">
+            <span className="flex items-center gap-1 text-xs text-[var(--color-text-secondary)]">
               净额{" "}
               {(() => {
                 const net = group.items.reduce((s, t) => s + t.amount, 0);
-                return `${net >= 0 ? "+" : ""}${net} 🪙`;
+                return (
+                  <>
+                    {net >= 0 ? "+" : ""}
+                    {net} <CoinIcon size={12} />
+                  </>
+                );
               })()}
             </span>
           </div>
@@ -91,7 +97,7 @@ export function TransactionList({
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
                     style={{ background: meta.bg }}
                   >
-                    {meta.icon}
+                    {meta.coin ? <CoinIcon size={18} /> : meta.icon}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-medium text-[var(--color-text-primary-2)]">
@@ -103,14 +109,15 @@ export function TransactionList({
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 text-[16px] font-bold ${
+                    className={`flex shrink-0 items-center gap-1 text-[16px] font-bold ${
                       tx.amount >= 0
                         ? "text-[var(--color-primary)]"
                         : "text-[var(--color-debt-red)]"
                     }`}
                   >
                     {tx.amount >= 0 ? "+" : ""}
-                    {tx.amount} 🪙
+                    {tx.amount}
+                    <CoinIcon size={14} />
                   </span>
                 </div>
               );

@@ -1,0 +1,47 @@
+{
+  "sun": {
+    "file": "sun.png",
+    "width": 111,
+    "height": 112
+  },
+  "lock-and-star": {
+    "file": "lock-and-star.png",
+    "width": 380,
+    "height": 383
+  },
+  "phone-input": {
+    "file": "phone-input.png",
+    "width": 37,
+    "height": 48
+  },
+  "lock-input": {
+    "file": "lock-input.png",
+    "width": 40,
+    "height": 48
+  },
+  "reset": {
+    "file": "reset.png",
+    "width": 41,
+    "height": 38
+  },
+  "wechat": {
+    "file": "wechat.png",
+    "width": 71,
+    "height": 65
+  },
+  "apple": {
+    "file": "apple.png",
+    "width": 57,
+    "height": 67
+  },
+  "phone-quick-login": {
+    "file": "phone-quick-login.png",
+    "width": 44,
+    "height": 64
+  },
+  "seedling": {
+    "file": "seedling.png",
+    "width": 126,
+    "height": 106
+  }
+}

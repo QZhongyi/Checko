@@ -1,4 +1,11 @@
+import Image from "next/image";
 import { IllustrationPlaceholder } from "./illustration";
+import spriteSheet from "@/assets/images/home-complete/celebration-sprite.png";
+import spriteJson from "@/assets/images/home-complete/celebration-sprite.json";
+import smilingFlame from "@/assets/images/home-complete/smiling-flame.png";
+import smallFlame from "@/assets/images/home-complete/small-flame.png";
+import raysLeft from "@/assets/images/home-complete/completion-rays-left.png";
+import raysRight from "@/assets/images/home-complete/completion-rays-right.png";
 
 /**
  * 首页 Hero 区域（home-ui-spec.md §10 / §11 / §12）
@@ -6,10 +13,61 @@ import { IllustrationPlaceholder } from "./illustration";
  * 三种 variant：
  *   - active：绿色进度环 + 正常火焰 + "今日 N/M 习惯已打卡"
  *   - debt：三段色环 + 灰色疲惫火焰 + 警示
- *   - completed：彩色环 + 庆祝文案 + 开心火焰 + sparkle
+ *   - completed：彩色环 + 庆祝文案（左右放射线）+ 笑脸火焰 + sprite 装饰
  *
  * EMPTY 状态不渲染 Hero（§13）。
  */
+
+/** sprite 原始网格为 64px，按 50% 缩放显示 */
+const SPRITE_SCALE = 0.5;
+
+type SpriteName = keyof typeof spriteJson;
+
+/** 从 celebration-sprite.png 中按 json 坐标裁出一个装饰元素 */
+function SpriteItem({
+  name,
+  size = 32,
+  className,
+  style,
+}: {
+  name: SpriteName;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const { x, y } = spriteJson[name];
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute ${className ?? ""}`}
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${spriteSheet.src})`,
+        backgroundSize: `${256 * SPRITE_SCALE}px ${256 * SPRITE_SCALE}px`,
+        backgroundPosition: `-${x * SPRITE_SCALE}px -${y * SPRITE_SCALE}px`,
+        backgroundRepeat: "no-repeat",
+        ...style,
+      }}
+    />
+  );
+}
+
+/** completed 庆祝态的背景装饰（彩条/圆点/星星，避开文字与数字留白处） */
+function CelebrationDecor() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <SpriteItem name="star-yellow-large" size={36} className="right-2 top-2" />
+      <SpriteItem name="star-pink" size={20} className="right-12 top-6" />
+      <SpriteItem name="strip-pink-top" size={28} className="left-4 top-3" />
+      <SpriteItem name="strip-yellow" size={24} className="bottom-4 right-6" />
+      <SpriteItem name="dot-pink" size={18} className="bottom-8 left-8" />
+      <SpriteItem name="star-blue" size={22} className="bottom-3 left-1/4" />
+      <SpriteItem name="star-yellow-left" size={18} className="left-2 top-1/3" />
+    </div>
+  );
+}
+
 export function HomeHero({
   variant,
   completed,
@@ -34,8 +92,10 @@ export function HomeHero({
 
   return (
     <section className="flex flex-col items-center gap-3 px-5 pt-4">
-      {/* 环 + 火焰并排 */}
-      <div className="flex w-full items-center justify-center gap-3">
+      {/* 环 + 火焰并排（completed 态叠加背景装饰） */}
+      <div className="relative flex w-full items-center justify-center gap-3">
+        {variant === "completed" && <CelebrationDecor />}
+
         {/* 进度环 */}
         <ProgressRing
           percent={percent}
@@ -45,22 +105,34 @@ export function HomeHero({
           total={total}
         />
 
-        {/* 火焰角色（占位）+ streak */}
-        <div className="flex flex-col items-center gap-1">
-          <IllustrationPlaceholder
-            label="火焰角色"
-            emoji={variant === "debt" ? "💨" : variant === "completed" ? "🎉" : "🔥"}
-            tone={variant === "debt" ? "neutral" : "warm"}
-            className="h-[100px] w-[100px] text-[52px]"
-          />
+        {/* 火焰角色 + streak */}
+        <div className="relative flex flex-col items-center gap-1">
+          {variant === "completed" ? (
+            <Image
+              src={smilingFlame}
+              alt=""
+              width={75}
+              height={100}
+              priority
+            />
+          ) : (
+            <IllustrationPlaceholder
+              label="火焰角色"
+              emoji={variant === "debt" ? "💨" : "🔥"}
+              tone={variant === "debt" ? "neutral" : "warm"}
+              className="h-[100px] w-[100px] text-[52px]"
+            />
+          )}
           <FlameStreak variant={variant} streak={streak} />
         </div>
       </div>
 
-      {/* 庆祝文案（仅 completed） */}
+      {/* 庆祝文案（仅 completed，左右绿色放射线成对） */}
       {variant === "completed" && (
-        <p className="text-center text-[22px] font-bold leading-8 text-[var(--color-text-primary-2)]">
+        <p className="flex items-center gap-2 text-center text-[22px] font-bold leading-8 text-[var(--color-text-primary-2)]">
+          <Image src={raysLeft} alt="" width={24} height={40} />
           完美！今日全部完成
+          <Image src={raysRight} alt="" width={24} height={40} />
         </p>
       )}
 
@@ -154,12 +226,13 @@ function FlameStreak({
       ? "var(--color-debt-red)"
       : "var(--color-orange)";
   return (
-    <div className="flex items-baseline gap-1">
+    <div className="flex items-center gap-1">
+      <Image src={smallFlame} alt="" width={16} height={20} />
       <span
         className="text-[30px] font-bold leading-none"
         style={{ color }}
       >
-        🔥 {streak}
+        {streak}
       </span>
       <span className="text-sm font-medium text-[var(--color-text-secondary-2)]">
         天连续

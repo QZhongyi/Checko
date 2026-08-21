@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, X } from "lucide-react";
+import { CoinIcon } from "@/components/ui/coin-icon";
 import {
   recordExpense,
   type ExpenseActionState,
@@ -153,17 +154,17 @@ function ExpenseSheet({
             >
               {invalid ? "⚠️ 金额无效或余额不足" : "当前余额"}
             </p>
-            <p className="mt-1 text-[26px] font-bold leading-8 text-[#3D2E00]">
-              🪙 {balance}
+            <p className="mt-1 flex items-center gap-1.5 text-[26px] font-bold leading-8 text-[#3D2E00]">
+              <CoinIcon size={22} /> {balance}
             </p>
             {amount.trim() !== "" && !invalid ? (
-              <p className="mt-1 text-sm font-medium text-[#5B4200]">
-                记录后余额 🪙 {after}
+              <p className="mt-1 flex items-center gap-1 text-sm font-medium text-[#5B4200]">
+                记录后余额 <CoinIcon size={13} /> {after}
               </p>
             ) : null}
             {after < 0 && amount.trim() !== "" ? (
-              <p className="mt-1 text-sm font-bold text-[var(--color-debt-red)]">
-                记录后余额 🪙 {after}（不足）
+              <p className="mt-1 flex items-center gap-1 text-sm font-bold text-[var(--color-debt-red)]">
+                记录后余额 <CoinIcon size={13} /> {after}（不足）
               </p>
             ) : null}
           </div>
