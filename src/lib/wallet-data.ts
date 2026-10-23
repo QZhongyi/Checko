@@ -36,6 +36,10 @@ export type TransactionItem = {
   balanceAfter: number;
   /** 消费项的记账日期（YYYY-MM-DD，用户选择的 expense_date） */
   expenseDate: string | null;
+  /** 消费项的 expenses.id（编辑/删除入口；非消费行为 null） */
+  expenseId: string | null;
+  /** 消费项备注（编辑表单预填） */
+  note: string | null;
   /** 分组用日期标签（如 "8月17日"；消费项按 expense_date，其余按用户时区 created_at） */
   dayLabel: string;
   /** 时间标签（HH:mm，用户时区；消费项无时间仅日期） */
@@ -100,7 +104,12 @@ export async function getWalletData(): Promise<WalletData> {
     created_at: string;
     balance_after: number;
   };
-  type ExpenseRow = { transaction_id: string; expense_date: string };
+  type ExpenseRow = {
+    id: string;
+    transaction_id: string;
+    expense_date: string;
+    note: string | null;
+  };
 
   // 时区取决于 profile，须先取 profile
   const profileRes = await supabase.rpc("get_my_profile").single();
@@ -136,8 +145,9 @@ export async function getWalletData(): Promise<WalletData> {
     listTxIds.length > 0
       ? supabase
           .from("expenses")
-          .select("transaction_id,expense_date")
+          .select("id,transaction_id,expense_date,note")
           .in("transaction_id", listTxIds)
+          .is("deleted_at", null)
       : Promise.resolve({ data: [], error: null }),
     supabase.rpc("get_my_month_summary", {
       p_month_start: monthStartDate,
@@ -154,16 +164,16 @@ export async function getWalletData(): Promise<WalletData> {
   type SummaryRow = { month_earned: number; month_spent: number };
   const summaryRow = summaryRes.data as SummaryRow | null;
 
-  // transaction_id → expense_date（列表展示用）
-  const expenseDateByTx = new Map<string, string>();
+  // transaction_id → expense 信息（日期展示 + 编辑/删除入口）
+  const expenseByTx = new Map<string, ExpenseRow>();
   for (const row of ((listExpenseRes.data ?? []) as ExpenseRow[])) {
-    expenseDateByTx.set(row.transaction_id, row.expense_date);
+    expenseByTx.set(row.transaction_id, row);
   }
 
   const transactions: TransactionItem[] = txRows.map((t) => {
-    const expenseDate = expenseDateByTx.get(t.id) ?? null;
+    const expense = expenseByTx.get(t.id) ?? null;
     const created = new Date(t.created_at);
-    if (expenseDate != null) {
+    if (expense != null) {
       return {
         id: t.id,
         type: t.transaction_type,
@@ -172,8 +182,10 @@ export async function getWalletData(): Promise<WalletData> {
         description: t.description,
         createdAt: t.created_at,
         balanceAfter: t.balance_after,
-        expenseDate,
-        dayLabel: dayLabelOf(expenseDate),
+        expenseDate: expense.expense_date,
+        expenseId: expense.id,
+        note: expense.note,
+        dayLabel: dayLabelOf(expense.expense_date),
         timeLabel: null,
       };
     }
@@ -186,6 +198,8 @@ export async function getWalletData(): Promise<WalletData> {
       createdAt: t.created_at,
       balanceAfter: t.balance_after,
       expenseDate: null,
+      expenseId: null,
+      note: null,
       dayLabel: dayLabelOf(dateInTZ(tz, created)),
       timeLabel: timeInTZ(tz, created),
     };

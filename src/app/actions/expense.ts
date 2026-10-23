@@ -23,6 +23,10 @@ const KNOWN_BUSINESS_ERRORS = [
   "用户不存在",
   "缺少请求标识",
   "消费日期不能晚于今天",
+  "消费记录不存在或无权限",
+  "该调整正在处理中",
+  "消费记录不存在、无权限或已被删除",
+  "该消费已删除",
 ];
 
 function toUserMessage(message: string): string {
@@ -80,5 +84,77 @@ export async function recordExpense(
 
   revalidatePath("/wallet");
   revalidatePath("/");
+  return { success: true };
+}
+
+/**
+ * 编辑消费：调 update_expense RPC（金额差额走 adjustment 交易；
+ * 备注/日期经 coalesce——传空 = 保留原值，只能改不能清空）。
+ */
+export async function updateExpense(
+  state: ExpenseActionState,
+  formData: FormData,
+): Promise<ExpenseActionState> {
+  const expenseId = String(formData.get("expenseId") ?? "").trim();
+  const amountRaw = String(formData.get("amount") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  const expenseDate = String(formData.get("expenseDate") ?? "").trim();
+
+  if (!UUID_RE.test(expenseId)) {
+    return { error: "消费记录标识无效" };
+  }
+  if (!/^\d+$/.test(amountRaw) || Number(amountRaw) < 1) {
+    return { error: `金额需为 1-${MAX_AMOUNT} 的整数` };
+  }
+  if (Number(amountRaw) > MAX_AMOUNT) {
+    return { error: `金额需为 1-${MAX_AMOUNT} 的整数` };
+  }
+  if (note.length > 100) {
+    return { error: "备注最多 100 个字符" };
+  }
+  if (expenseDate !== "" && !DATE_RE.test(expenseDate)) {
+    return { error: "日期格式无效" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("update_expense", {
+    p_expense_id: expenseId,
+    p_new_amount: Number(amountRaw),
+    // 空 = 不传 = 保留原值（RPC coalesce 语义；备注与日期不可清空）
+    p_note: note || undefined,
+    p_expense_date: expenseDate || undefined,
+  });
+
+  if (error) {
+    return { error: toUserMessage(error.message) };
+  }
+
+  revalidatePath("/wallet");
+  return { success: true };
+}
+
+/**
+ * 删除消费：调 delete_expense RPC（软删 + 全额返还荷包）。
+ */
+export async function deleteExpense(
+  state: ExpenseActionState,
+  formData: FormData,
+): Promise<ExpenseActionState> {
+  const expenseId = String(formData.get("expenseId") ?? "").trim();
+
+  if (!UUID_RE.test(expenseId)) {
+    return { error: "消费记录标识无效" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("delete_expense", {
+    p_expense_id: expenseId,
+  });
+
+  if (error) {
+    return { error: toUserMessage(error.message) };
+  }
+
+  revalidatePath("/wallet");
   return { success: true };
 }

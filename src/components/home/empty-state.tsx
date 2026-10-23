@@ -2,7 +2,7 @@ import Link from "next/link";
 import { IllustrationPlaceholder } from "./illustration";
 
 /**
- * 空状态（home-ui-spec.md §13）
+ * 空状态（首页特殊状态_prompt.md 状态 1 空状态）
  *
  * EMPTY 状态隐藏 Hero / 项目列表，但保留 Header 和 BottomNav。
  * 这里只渲染中央插画 + 标题 + 描述 + 创建按钮。
@@ -17,14 +17,15 @@ export function EmptyState() {
         className="h-[260px] w-[270px] text-[96px]"
       />
 
-      {/* 标题 */}
+      {/* 标题（00080 评审 P3-4：软删/取消的历史项目不在查询信号中，
+          代码无法证明"从未"，文案只陈述可判定事实） */}
       <h2 className="mt-8 text-center text-[30px] font-bold leading-10 text-[var(--color-text-primary-2)]">
-        还没有项目
+        暂无进行中的项目
       </h2>
 
       {/* 描述 */}
       <p className="mt-3 max-w-[300px] text-center text-base font-medium leading-[26px] text-[#707895]">
-        创建你的第一个项目，种下一项新习惯，开始积累连续打卡。
+        创建一个项目，种下一项新习惯，开始积累连续打卡。
       </p>
 
       {/* CTA */}
@@ -36,7 +37,7 @@ export function EmptyState() {
             "linear-gradient(90deg, var(--color-primary), #2ED32C)",
         }}
       >
-        创建第一个项目
+        创建新项目
       </Link>
     </section>
   );

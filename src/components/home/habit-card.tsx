@@ -15,7 +15,7 @@ import {
 } from "@/app/actions/checkin";
 
 /**
- * 项目卡片（home-ui-spec.md §7）
+ * 项目卡片（首页设计图_prompt.md §4.3 项目卡片列表）
  *
  * 通用结构：
  *   Icon | Content(Title/Streak/Progress?) | StatusArea(Reward?/CheckButton/StatusLabel?)
@@ -43,6 +43,12 @@ export type HabitCardData = {
   canRevoke: boolean;
   /** 今日截止时间（ISO 字符串），客户端到点自动隐藏撤销入口 */
   deadlineAt: string;
+  /** 多人项目标识：成员数（active+pending）与今日完成进度（义务化口径）；
+   *  个人项目为 null，不渲染徽章 */
+  groupBadge?: { memberCount: number; todayDone: number; todayTotal: number } | null;
+  /** 负债态：every_time 奖励文案切换为"还债 +N"，卡片边缘红色微光
+   *  （首页特殊状态_prompt.md §四"卡片边缘微妙红色光晕"） */
+  inDebt?: boolean;
 };
 
 const DEFAULT_THEME_COLOR = "var(--color-primary)";
@@ -88,7 +94,17 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
   }, [habit.deadlineAt, expired]);
 
   return (
-    <article className="flex min-h-[104px] gap-3 rounded-3xl bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.045)]">
+    <article
+      className="flex min-h-[104px] gap-3 rounded-3xl bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.045)]"
+      style={
+        habit.inDebt
+          ? {
+              boxShadow:
+                "0 6px 20px rgba(0,0,0,0.045), 0 0 0 1.5px rgba(255,59,48,0.28), 0 0 14px rgba(255,59,48,0.16)",
+            }
+          : undefined
+      }
+    >
       {/* 内容区整体可点，跳转详情页（状态区表单在 Link 外，天然无冒泡问题） */}
       <Link
         href={`/projects/${habit.id}`}
@@ -121,6 +137,12 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
         <h3 className="text-[17px] font-bold leading-6 text-[var(--color-text-primary-2)]">
           {habit.title}
         </h3>
+        {habit.groupBadge ? (
+          <p className="text-xs font-medium leading-5 text-[var(--color-text-secondary)]">
+            👥 {habit.groupBadge.memberCount} 人 · 今日 {habit.groupBadge.todayDone}/
+            {habit.groupBadge.todayTotal} 人已打卡
+          </p>
+        ) : null}
         <p
           className="text-sm font-medium leading-5"
           style={{ color: themeColor }}
@@ -139,10 +161,11 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
           />
         </div>
 
-        {/* 可选 reward（按奖励模式生成准确文案；every_n/completed 不在打卡时即时发奖） */}
+        {/* 可选 reward（按奖励模式生成准确文案；every_n/completed 不在打卡时即时发奖；
+            负债态 every_time 切换"还债 +N"） */}
         {habit.rewardCoins ? (
           <p className="flex items-center gap-1 text-[13px] font-medium text-[var(--color-debt-red)]">
-            {rewardLabel(habit.rewardMode ?? "every_time", habit.rewardCoins, habit.rewardNValue ?? null)}
+            {rewardLabel(habit.rewardMode ?? "every_time", habit.rewardCoins, habit.rewardNValue ?? null, habit.inDebt ?? false)}
             <CoinIcon size={13} />
           </p>
         ) : null}
@@ -197,7 +220,7 @@ export function HabitCard({ habit }: { habit: HabitCardData }) {
 }
 
 /**
- * 打卡按钮（home-ui-spec.md §9）
+ * 打卡按钮（首页设计图_prompt.md §4.3 右侧圆形打卡按钮）
  *
  * 未完成：白底 + 项目状态色边框 + 项目色 ✓，点击提交 create_checkin
  * 已完成：绿色实心 + 白 ✓（纯展示）

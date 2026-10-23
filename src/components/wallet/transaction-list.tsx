@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { TransactionItem, TxType } from "@/lib/wallet-data";
 import { CoinIcon } from "@/components/ui/coin-icon";
+import { ExpenseManageSheet } from "@/components/wallet/expense-manage-sheet";
 
 /**
  * 交易记录列表（纯展示，按 DAL 预格式化的 dayLabel 分组）
@@ -23,6 +27,20 @@ function metaOf(tx: TransactionItem): { icon: string; coin?: boolean; label: str
         return { icon: "✏️", label: "更正", bg: "#F1E9FF" };
     }
   }
+  if (tx.type === "reward") {
+    switch (tx.reason) {
+      case "makeup":
+        return { icon: "", coin: true, label: "补卡奖励", bg: "var(--color-primary-soft)" };
+      case "settlement":
+        return { icon: "", coin: true, label: "团队结算奖励", bg: "var(--color-primary-soft)" };
+      case "milestone":
+        return { icon: "", coin: true, label: "里程碑奖励", bg: "var(--color-primary-soft)" };
+      case "completion":
+        return { icon: "", coin: true, label: "完成奖励", bg: "var(--color-primary-soft)" };
+      default:
+        return { icon: "", coin: true, label: "打卡奖励", bg: "var(--color-primary-soft)" };
+    }
+  }
   const base: Record<TxType, { icon: string; coin?: boolean; label: string; bg: string }> = {
     reward: { icon: "", coin: true, label: "打卡奖励", bg: "var(--color-primary-soft)" },
     penalty: { icon: "⚠️", label: "缺卡惩罚", bg: "#FFEBEA" },
@@ -35,9 +53,14 @@ function metaOf(tx: TransactionItem): { icon: string; coin?: boolean; label: str
 
 export function TransactionList({
   transactions,
+  todayIso,
 }: {
   transactions: TransactionItem[];
+  todayIso: string;
 }) {
+  // 当前管理中的消费行（编辑/删除入口；须先于一切条件返回声明）
+  const [managing, setManaging] = useState<TransactionItem | null>(null);
+
   if (transactions.length === 0) {
     return (
       <div className="rounded-3xl bg-white px-4 py-10 text-center shadow-[0_6px_20px_rgba(0,0,0,0.045)]">
@@ -119,12 +142,34 @@ export function TransactionList({
                     {tx.amount}
                     <CoinIcon size={14} />
                   </span>
+                  {tx.type === "expense" && tx.expenseId != null ? (
+                    <button
+                      type="button"
+                      onClick={() => setManaging(tx)}
+                      className="ml-1 shrink-0 rounded-full bg-[#F3F4F6] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition active:scale-95"
+                    >
+                      管理
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
           </div>
         </section>
       ))}
+
+      {managing && managing.expenseId != null ? (
+        <ExpenseManageSheet
+          expense={{
+            id: managing.expenseId,
+            amount: managing.amount,
+            note: managing.note,
+            expenseDate: managing.expenseDate ?? todayIso,
+          }}
+          todayIso={todayIso}
+          onClose={() => setManaging(null)}
+        />
+      ) : null}
     </div>
   );
 }

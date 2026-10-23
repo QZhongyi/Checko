@@ -1,57 +1,60 @@
-import type { LeaderboardEntry } from "@/lib/friend-data";
+import {
+  leaderboardMetric,
+  type LeaderboardDimension,
+  type LeaderboardEntry,
+} from "@/lib/friend-data";
 import { CoinIcon } from "@/components/ui/coin-icon";
+import {
+  RankLoadFailedCard,
+  amountColor,
+  competitionRanks,
+  rankBadgeColor,
+} from "./rank-shared";
 
 /**
  * 好友排行榜 tab（server component，纯展示）：
- * DAL 已按余额排序（00042：RPC 的 ORDER BY 不是公共合同），
- * 前端编号并高亮本人行。private 好友被 RPC 过滤，剩本人是正常态。
+ * DAL 已按所选维度排序，前端编号并高亮本人行；
+ * sticky 本人排名摘要（bottom-24 避让 fixed 底导航）。
  */
 export function RankTab({
   entries,
   myUserId,
+  dimension,
   loadFailed,
 }: {
   entries: LeaderboardEntry[];
   myUserId: string;
+  dimension: LeaderboardDimension;
   loadFailed: boolean;
 }) {
   if (loadFailed) {
-    return (
-      <div className="rounded-3xl bg-white px-6 py-10 text-center shadow-[0_6px_20px_rgba(0,0,0,0.045)]">
-        <p className="text-[15px] font-bold text-[var(--color-text-primary-2)]">
-          排行榜加载失败
-        </p>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          请稍后刷新重试
-        </p>
-      </div>
-    );
+    return <RankLoadFailedCard label="排行榜" />;
   }
 
+  const ranks = competitionRanks(entries.map((e) => leaderboardMetric(e, dimension)));
+  const myIndex = entries.findIndex((e) => e.userId === myUserId);
+  const myEntry = myIndex >= 0 ? entries[myIndex] : null;
+  const myMetric = myEntry ? leaderboardMetric(myEntry, dimension) : 0;
+  const myRank = myIndex >= 0 ? ranks[myIndex] : 0;
+
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-[0_6px_20px_rgba(0,0,0,0.045)]">
-      <ul>
+    <>
+      <div className="overflow-hidden rounded-3xl bg-white shadow-[0_6px_20px_rgba(0,0,0,0.045)]">
+        <ul>
         {entries.map((entry, index) => {
           const isMe = entry.userId === myUserId;
-          const rank = index + 1;
+          const metric = leaderboardMetric(entry, dimension);
+          const rank = ranks[index];
           return (
             <li
               key={entry.userId}
               className={`flex items-center gap-3 px-4 py-3.5 ${
-                rank > 1 ? "border-t border-[#F3F4F6]" : ""
+                index > 0 ? "border-t border-[#F3F4F6]" : ""
               } ${isMe ? "bg-[#EFFAF3]" : ""}`}
             >
               <span
                 aria-label={`第 ${rank} 名`}
-                className={`w-6 shrink-0 text-center text-[15px] font-bold ${
-                  rank === 1
-                    ? "text-[#F5A623]"
-                    : rank === 2
-                      ? "text-[#9CA3AF]"
-                      : rank === 3
-                        ? "text-[#C77B42]"
-                        : "text-[var(--color-text-secondary)]"
-                }`}
+                className={`w-6 shrink-0 text-center text-[15px] font-bold ${rankBadgeColor(rank)}`}
               >
                 {rank}
               </span>
@@ -70,18 +73,44 @@ export function RankTab({
                 ) : null}
               </span>
               <span
-                className={`flex shrink-0 items-center gap-1 text-[15px] font-bold ${
-                  entry.walletBalance >= 0
-                    ? "text-[var(--color-text-primary-2)]"
-                    : "text-[var(--color-debt-red)]"
-                }`}
+                className={`flex shrink-0 items-center gap-1 text-[15px] font-bold ${amountColor(metric)}`}
               >
-                <CoinIcon size={14} /> {entry.walletBalance}
+                <CoinIcon size={14} /> {metric}
               </span>
             </li>
           );
         })}
       </ul>
     </div>
+
+    {/* 位于列表卡片之外（不受 overflow-hidden 裁剪） */}
+    {myEntry ? (
+      <div className="sticky bottom-24 mt-2 flex items-center gap-3 rounded-2xl bg-[#EFFAF3] px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
+        <span
+          aria-label={`我的排名 第 ${myRank} 名`}
+          className="w-6 shrink-0 text-center text-[15px] font-bold text-[var(--color-text-secondary)]"
+        >
+          {myRank}
+        </span>
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-[var(--color-primary)]"
+        >
+          {(myEntry.nickname ?? "?").slice(0, 1).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--color-text-primary-2)]">
+          {myEntry.nickname ?? "未知用户"}
+          <span className="ml-1 text-xs font-medium text-[var(--color-primary)]">
+            （我）
+          </span>
+        </span>
+        <span
+          className={`flex shrink-0 items-center gap-1 text-[15px] font-bold ${amountColor(myMetric)}`}
+        >
+          <CoinIcon size={14} /> {myMetric}
+        </span>
+      </div>
+    ) : null}
+    </>
   );
 }

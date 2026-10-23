@@ -25,7 +25,7 @@
   --color-divider: #e8e9ed; /* 分割线 */
   --color-vdivider: #ecedef; /* 竖分隔线 */
 
-  /* 首页扩展色（home-ui-spec.md §3） */
+  /* 首页扩展色（首页设计图_prompt.md §4.5 配色规范） */
   --color-purple: #8b4dff; /* 阅读项目 */
   --color-orange: #ff6b00; /* 团队/连续天数火焰 */
   --color-water-blue: #22a8f2; /* 喝水项目 */

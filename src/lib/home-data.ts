@@ -15,9 +15,11 @@ import { createSupabaseServerClient } from "@/utils/supabase/server";
  *     不得作为主集合（否则无关项目会污染打卡进度与 ALL_COMPLETED 判定）。
  *   - 任一必需 RPC 失败直接抛错，由页面渲染失败态；不把基础设施故障
  *     伪装成"空项目 / 余额 0 / 未完成"等业务状态。
+ *   - DEBT = wallet_balance < 0（惩罚/撤销可推负，需求 §5.6.3），待偿还
+ *     金额 = |余额|；debt_records 仅审计 penalty_capped 豁免额、不参与
+ *     wallet_balance 与展示（需求 §10.18）。
  *
  * 当前限制：
- *   - DEBT 状态未实现（debt 在 debt_records 表，需独立查询），留 TODO。
  *   - streak 口径：hero 展示所有项目中最大的 current_streak。
  */
 
@@ -57,6 +59,12 @@ export type ProjectSummary = {
   canRevoke: boolean;
   /** 今日截止时间（ISO 字符串，供客户端到点隐藏撤销入口） */
   deadlineAt: string;
+  /** 多人项目标识（00070 summary 扩列；个人项目 null） */
+  groupBadge: {
+    memberCount: number;
+    todayDone: number;
+    todayTotal: number;
+  } | null;
 };
 
 export type MyProfile = {
@@ -79,6 +87,39 @@ export type HomeData = {
   totalToday: number;
   streak: number;
   debtAmount: number;
+  /** 我收到的待处理项目邀请（00033 RPC） */
+  invitations: ProjectInvitation[];
+  /** 待开始的项目（我创建或已接受加入；pending 期不在今日主集合，
+   *  需要常驻入口进入详情邀请/查看。含 personal——截止后创建的
+   *  个人项目会顺延到次日 pending，同样需要入口） */
+  pendingProjects: PendingProject[];
+  /** 已完成的有限次项目（archived，个人与团队；保留展示） */
+  finishedProjects: FinishedProject[];
+};
+
+export type FinishedProject = {
+  id: string;
+  name: string;
+  icon: string | null;
+  current: number;
+  target: number;
+};
+
+export type PendingProject = {
+  id: string;
+  name: string;
+  icon: string | null;
+  startsAt: string | null;
+  isOwner: boolean;
+  projectType: "personal" | "group";
+};
+
+export type ProjectInvitation = {
+  projectId: string;
+  name: string;
+  icon: string | null;
+  startsAt: string | null;
+  projectStatus: "pending" | "active" | "cancelled" | "archived";
 };
 
 export async function getHomeData(): Promise<HomeData> {
@@ -96,18 +137,22 @@ export async function getHomeData(): Promise<HomeData> {
       totalToday: 0,
       streak: 0,
       debtAmount: 0,
+      invitations: [],
+      pendingProjects: [],
+      finishedProjects: [],
     };
   }
 
   // 行类型已在文件头从生成的 Database 类型提取
 
-  // 并行拉取 profile + 项目列表 + 今日打卡状态
-  // 注意：这三个是 RPC 函数，必须走 .rpc()（PostgREST 不把返回集合的
+  // 并行拉取 profile + 项目列表 + 今日打卡状态 + 项目邀请
+  // 注意：这些是 RPC 函数，必须走 .rpc()（PostgREST 不把返回集合的
   // 函数当表暴露，.from() 会 404 PGRST205 且被 ?? [] 静默吞掉）。
-  const [profileRes, projectsRes, todayRes] = await Promise.all([
+  const [profileRes, projectsRes, todayRes, invitationsRes] = await Promise.all([
     supabase.rpc("get_my_profile").single(),
     supabase.rpc("get_visible_project_summaries"),
     supabase.rpc("get_today_checkin_status"),
+    supabase.rpc("get_my_project_invitations"),
   ]);
 
   // 任一必需 RPC 失败即抛错：基础设施故障不允许伪装成业务状态
@@ -121,8 +166,70 @@ export async function getHomeData(): Promise<HomeData> {
   if (todayRes.error) {
     throw new Error(`今日打卡状态加载失败: ${todayRes.error.message}`);
   }
+  if (invitationsRes.error) {
+    throw new Error(`项目邀请加载失败: ${invitationsRes.error.message}`);
+  }
+
+  const invitations: ProjectInvitation[] = (invitationsRes.data ?? []).map(
+    (row) => ({
+      projectId: row.project_id,
+      name: row.name,
+      icon: row.icon,
+      startsAt: row.starts_at,
+      projectStatus: row.project_status,
+    }),
+  );
+
+  // 待开始的多人项目：owner（summary 自带 owner_id）或我已接受加入
+  // （补一条本人 project_members 直查，RLS 限本人行）
+  const myMemberRes = await supabase
+    .from("project_members")
+    .select("project_id")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+  if (myMemberRes.error) {
+    throw new Error(`我的成员关系加载失败: ${myMemberRes.error.message}`);
+  }
+  const myMemberProjectIds = new Set(
+    (myMemberRes.data ?? []).map((row) => row.project_id as string),
+  );
+  const pendingProjects: PendingProject[] = (
+    projectsRes.data ?? []
+  )
+    .filter(
+      (row) =>
+        row.status === "pending" &&
+        // 多人：owner 或我已接受加入；个人：仅 owner（个人项目无邀请流）
+        (row.project_type === "group"
+          ? row.owner_id === user.id || myMemberProjectIds.has(row.id)
+          : row.owner_id === user.id),
+    )
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      icon: row.icon,
+      startsAt: row.starts_at,
+      isOwner: row.owner_id === user.id,
+      projectType: row.project_type,
+    }));
 
   const profileRow = profileRes.data;
+  const finishedProjects: FinishedProject[] = (projectsRes.data ?? [])
+    .filter(
+      (row) =>
+        row.status === "archived" &&
+        row.v_target_count != null &&
+        (row.project_type === "personal"
+          ? row.owner_id === user.id
+          : row.owner_id === user.id || myMemberProjectIds.has(row.id)),
+    )
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      icon: row.icon,
+      current: row.v_current_progress ?? 0,
+      target: row.v_target_count ?? 0,
+    }));
   const profile: MyProfile | null = profileRow
     ? {
         id: profileRow.id,
@@ -167,6 +274,14 @@ export async function getHomeData(): Promise<HomeData> {
       canRevoke:
         today.checkin_id != null && new Date(today.deadline_at).getTime() > now,
       deadlineAt: today.deadline_at,
+      groupBadge:
+        p?.project_type === "group"
+          ? {
+              memberCount: p.member_count,
+              todayDone: p.today_done,
+              todayTotal: p.today_total,
+            }
+          : null,
     };
   });
 
@@ -175,11 +290,21 @@ export async function getHomeData(): Promise<HomeData> {
 
   // 状态判定（规范 §14）：
   //   EMPTY > DEBT > ALL_COMPLETED > ACTIVE
-  // TODO: 查 debt_records 算 debtAmount → 若 > 0 则 state = "DEBT"
+  // EMPTY = "暂无进行中的项目"（可判定事实口径：今日无待打卡、无待开始/
+  // 已完成项目、无待处理邀请；软删/取消的历史项目不在信号中，文案不
+  // 声称"从未有过项目"）
+  // DEBT = 余额为负；豁免债务（debt_records）仅审计不参与判定（见文件头）
+  const hasAnyProjectSignal =
+    pendingProjects.length > 0 ||
+    finishedProjects.length > 0 ||
+    invitations.length > 0;
+  const debtAmount = profile ? Math.max(0, -profile.walletBalance) : 0;
   let state: HomeState = "ACTIVE";
-  if (totalToday === 0) {
+  if (totalToday === 0 && !hasAnyProjectSignal) {
     state = "EMPTY";
-  } else if (completedToday === totalToday) {
+  } else if (debtAmount > 0) {
+    state = "DEBT";
+  } else if (completedToday === totalToday && totalToday > 0) {
     state = "ALL_COMPLETED";
   }
 
@@ -190,6 +315,9 @@ export async function getHomeData(): Promise<HomeData> {
     completedToday,
     totalToday,
     streak: projects.reduce((max, p) => Math.max(max, p.currentStreak), 0),
-    debtAmount: 0, // TODO: DEBT 状态待实现
+    debtAmount,
+    invitations,
+    pendingProjects,
+    finishedProjects,
   };
 }

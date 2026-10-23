@@ -2,17 +2,16 @@ import Link from "next/link";
 import { Home, Users, Trophy, User, Plus } from "lucide-react";
 
 /**
- * 底部导航（home-ui-spec.md §6）
+ * 底部导航（首页设计图_prompt.md §4.4 底部 Tab Bar）
  *
  * 五项：Home / Social / CreateButton / Achievement / Profile
  * - 由页面壳以 fixed 常驻视口底部（含安全区）
  * - 每项带可见短标签；当前页由 active prop 标记
- * - 未实现页面（成就）呈现明确的不可用状态，不用 href="#"
  */
 export function BottomNav({
   active = "home",
 }: {
-  active?: "home" | "friends" | "profile";
+  active?: "home" | "friends" | "achievements" | "profile";
 }) {
   return (
     <nav
@@ -29,7 +28,11 @@ export function BottomNav({
 
       <CreateButton />
 
-      <NavItem label="成就" disabled>
+      <NavItem
+        label="成就"
+        href="/achievements"
+        active={active === "achievements"}
+      >
         <Trophy size={26} />
       </NavItem>
 

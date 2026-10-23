@@ -32,11 +32,11 @@ const KNOWN_BUSINESS_ERRORS = [
   "今日已打卡",
 ];
 
-function toUserMessage(message: string): string {
+function toUserMessage(message: string, detail?: unknown): string {
   if (KNOWN_BUSINESS_ERRORS.some((prefix) => message.startsWith(prefix))) {
     return message;
   }
-  console.error("checkin RPC 未知错误:", message);
+  console.error("checkin RPC 未知错误:", message, JSON.stringify(detail));
   return "操作失败，请稍后重试";
 }
 
@@ -60,7 +60,7 @@ export async function performCheckin(
   });
 
   if (error) {
-    return { error: toUserMessage(error.message) };
+    return { error: toUserMessage(error.message, error) };
   }
 
   revalidatePath("/");

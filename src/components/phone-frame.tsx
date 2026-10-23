@@ -10,7 +10,7 @@ import clsx, { type ClassValue } from "clsx";
  *
  * variant:
  *   - "auth"（默认）：登录/注册页背景渐变
- *   - "home"：首页背景渐变（home-ui-spec.md §2）
+ *   - "home"：首页背景渐变（首页设计图_prompt.md §4.5 背景渐变）
  */
 export function PhoneFrame({
   children,

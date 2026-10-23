@@ -118,7 +118,10 @@ export default async function WalletPage() {
           <h2 className="mb-3 text-[22px] font-bold leading-[30px] text-[var(--color-text-primary-2)]">
             收支记录
           </h2>
-          <TransactionList transactions={data.transactions} />
+          <TransactionList
+            transactions={data.transactions}
+            todayIso={data.todayIso}
+          />
         </div>
       </main>
     </PhoneFrame>

@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { createSupabaseServerClient } from "@/utils/supabase/server";
 import { getProjectDetailData } from "@/lib/project-detail-data";
+import { getInvitableFriends } from "@/lib/friend-data";
 import { PhoneFrame } from "@/components/phone-frame";
 import { RewardCard } from "@/components/project-detail/reward-card";
 import { MonthCalendar } from "@/components/project-detail/month-calendar";
+import { MemberPanel } from "@/components/project-detail/member-panel";
+import { CancelProjectButton } from "@/components/project-detail/cancel-project-button";
 import { CheckinButton } from "./checkin-button";
 
 const UUID_RE =
@@ -55,7 +58,14 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
-  const { project, eligibility, todayCheckinId, canRevoke, deadlineAt, calendar, calendarMonthLabel, calendarToday, stats, isMyStatsOnly } = data;
+  const { project, eligibility, todayCheckinId, canRevoke, deadlineAt, calendar, calendarMonthLabel, calendarToday, stats, isMyStatsOnly, memberOverview, finiteProgress, isOwner, makeupQuota } = data;
+
+  // owner + pending 多人项目需要好友列表供邀请弹窗（其余不取）
+  const needFriends =
+    memberOverview?.isOwner === true && project.status === "pending";
+  const invitableFriends = needFriends
+    ? await getInvitableFriends().catch(() => [])
+    : [];
 
   return (
     <PhoneFrame variant="home">
@@ -78,23 +88,55 @@ export default async function ProjectDetailPage({
               <h1 className="text-xl font-bold leading-7 text-[var(--color-text-primary-2)]">
                 {project.name}
               </h1>
-              <span className="mt-1 inline-block rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
-                {project.projectType === "personal"
-                  ? "👤 个人项目"
-                  : "👥 多人项目"}
-              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
+                  {project.projectType === "personal"
+                    ? "👤 个人项目"
+                    : "👥 多人项目"}
+                </span>
+                {finiteProgress ? (
+                  <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
+                    🎯 {finiteProgress.current}/{finiteProgress.target} 次
+                  </span>
+                ) : null}
+                {project.status === "archived" ? (
+                  <span className="rounded-full bg-[var(--color-brand-icon-bg)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-primary)]">
+                    ✅ 已完成
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
 
           <p className="mt-4 text-[28px] font-bold leading-9 text-[var(--color-orange)]">
-            🔥 连续 {stats.currentStreak} 天
+            {memberOverview
+              ? `🔥 团队连续 ${memberOverview.teamStreak} 天`
+              : `🔥 连续 ${stats.currentStreak} 天`}
           </p>
 
           {/* 统计 chip 行（多人项目口径为"我的记录"） */}
           <div className="mt-3 flex flex-wrap gap-2">
+            {memberOverview ? (
+              <Chip>我的连续 {stats.currentStreak} 天</Chip>
+            ) : null}
             <Chip>完成率 {stats.completionRate}%</Chip>
             <Chip>总打卡 {stats.totalCount} 次</Chip>
             <Chip>最长连续 {stats.maxStreak} 天</Chip>
+            {makeupQuota.kind === "independent" ? (
+              makeupQuota.limit - makeupQuota.used > 0 ? (
+                <Chip>补卡 {makeupQuota.limit - makeupQuota.used}/{makeupQuota.limit}</Chip>
+              ) : (
+                <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-[var(--color-debt-red)]">
+                  补卡 0/{makeupQuota.limit}
+                </span>
+              )
+            ) : makeupQuota.remaining > 0 ? (
+              <Chip>团队补卡 {makeupQuota.remaining}/{makeupQuota.limit}</Chip>
+            ) : (
+              <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-[var(--color-debt-red)]">
+                团队补卡 0/{makeupQuota.limit}
+              </span>
+            )}
           </div>
           {isMyStatsOnly ? (
             <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
@@ -115,6 +157,15 @@ export default async function ProjectDetailPage({
           </div>
         </section>
 
+        {memberOverview ? (
+          <MemberPanel
+            projectId={project.id}
+            projectStatus={project.status}
+            overview={memberOverview}
+            friends={invitableFriends}
+          />
+        ) : null}
+
         <RewardCard
           rewardMode={project.rewardMode}
           rewardNValue={project.rewardNValue}
@@ -122,9 +173,18 @@ export default async function ProjectDetailPage({
           penaltyAmount={project.penaltyAmount}
           deadlineTime={project.deadlineTime}
           timezone={project.timezone}
+          poolPerSettlement={memberOverview?.poolPerSettlement}
         />
 
         <MonthCalendar monthLabel={calendarMonthLabel} days={calendar} today={calendarToday} />
+
+        {/* 取消项目（owner + 未结束；软删且金币不回收，confirm 二次确认） */}
+        {isOwner &&
+        (project.status === "pending" || project.status === "active") ? (
+          <div className="mt-6">
+            <CancelProjectButton projectId={project.id} />
+          </div>
+        ) : null}
       </main>
     </PhoneFrame>
   );

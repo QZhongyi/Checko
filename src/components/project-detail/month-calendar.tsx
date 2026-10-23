@@ -1,16 +1,17 @@
-import type { CalendarDay, CalendarDayStatus } from "@/lib/project-detail-data";
+import type { CalendarDay, CalendarDayStatus } from "@/lib/project-detail-calendar";
 
 /**
  * 本月打卡日历（纯展示，状态判定在 DAL 完成）
  *
  * - 周一起始，固定 6×7=42 格
- * - 状态配色：checked 绿 / makeup 黄 / missed 红 / today 绿描边 / none 灰
+ * - 状态配色：checked 绿 / makeup 黄 / missed 红 / exempted 蓝 / today 绿描边 / none 灰
  * - 状态同时以文本输出（aria-label / title），不依赖颜色区分
  */
 const STATUS_STYLES: Record<CalendarDayStatus, string> = {
   checked: "bg-[var(--color-primary)] text-white",
   makeup: "bg-[var(--color-coin-yellow)] text-white",
   missed: "bg-[var(--color-debt-red)] text-white",
+  exempted: "bg-[#E3EDFF] text-[#4A6B9B]",
   today: "border-2 border-[var(--color-primary)] bg-white text-[var(--color-primary)] font-bold",
   none: "bg-[#F1F2F4] text-[var(--color-text-secondary)]",
 };
@@ -19,6 +20,7 @@ const STATUS_LABELS: Record<CalendarDayStatus, string> = {
   checked: "已打卡",
   makeup: "补卡",
   missed: "缺卡",
+  exempted: "免打卡",
   today: "今天待打卡",
   none: "未开始",
 };
@@ -27,6 +29,7 @@ const LEGEND: { status: CalendarDayStatus; label: string }[] = [
   { status: "checked", label: "已打卡" },
   { status: "makeup", label: "补卡" },
   { status: "missed", label: "缺卡" },
+  { status: "exempted", label: "免打卡" },
   { status: "today", label: "今天" },
 ];
 

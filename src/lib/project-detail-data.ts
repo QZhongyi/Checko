@@ -3,46 +3,91 @@ import "server-only";
 import { createSupabaseServerClient } from "@/utils/supabase/server";
 import type { Database } from "@/utils/supabase/types";
 import type { RewardMode } from "@/lib/reward";
+import {
+  buildMonthCalendar,
+  computeMyStreaks,
+  dateInTimeZone,
+  isTodayFailed,
+  type CalendarDay,
+  type OccurrenceFinalStatus,
+} from "@/lib/project-detail-calendar";
 
 /** 生成类型的 RPC 返回元素（列漂移直接编译失败，不手写合同） */
 type Db = Database["public"];
 type ActivityRow = Db["Functions"]["get_my_checkin_activity"]["Returns"][number];
+type OverviewRow = Db["Functions"]["get_project_member_overview"]["Returns"][number];
+
+/** 成员总览（多人项目；members 为 RPC jsonb 列的窄化） */
+export type MemberOverview = {
+  today: string;
+  checkinMode: "any_one" | "all" | null;
+  maxMembers: number;
+  todayDone: number;
+  todayTotal: number;
+  teamStreak: number;
+  isOwner: boolean;
+  myStatus: "pending" | "active" | "quit" | "removed" | "expired" | null;
+  members: MemberOverviewMember[];
+  /** 每次结算池额度（00071） */
+  poolPerSettlement: number;
+  /** 我从团队结算累计分得（00071） */
+  mySettlementEarned: number;
+  /** 已结算次数（00071） */
+  settlementCount: number;
+  /** 奖励池总预算（批次 3；null = 未设） */
+  lifetimeBudget: number | null;
+  /** 已累计发放总额（批次 3，sum(total_pool)） */
+  totalGranted: number;
+};
+
+export type MemberOverviewMember = {
+  userId: string;
+  nickname: string | null;
+  avatar: string | null;
+  role: "owner" | "admin" | "member";
+  status: "pending" | "active";
+  todayChecked: boolean;
+  todayCheckedAt: string | null;
+};
+
+function parseMemberOverview(row: OverviewRow): MemberOverview {
+  const raw = row.v_members as unknown;
+  const members = (Array.isArray(raw) ? raw : []) as MemberOverviewMember[];
+  return {
+    today: row.v_today,
+    checkinMode: row.v_checkin_mode,
+    maxMembers: row.v_max_members,
+    todayDone: row.v_today_done,
+    todayTotal: row.v_today_total,
+    teamStreak: row.v_team_streak,
+    isOwner: row.v_is_owner,
+    myStatus: row.v_my_status,
+    members,
+    poolPerSettlement: row.v_pool_per_settlement,
+    mySettlementEarned: row.v_my_settlement_earned,
+    settlementCount: row.v_settlement_count,
+    lifetimeBudget: row.v_lifetime_budget ?? null,
+    totalGranted: row.v_total_granted ?? 0,
+  };
+}
 
 /**
  * 项目详情页数据访问层（DAL）
  *
  * - 项目基础信息：直查 checkin_projects（RLS 仅 owner/成员可见）
- * - 打卡历史：get_my_checkin_activity RPC（数据库仅返回**本人**记录；
- *   DAL 按 500 条/页循环读全量，规避 Data API 1000 行上限；
- *   多人项目日历/统计口径为"我的记录"，页面明确标注）
- * - 今日状态：复用 get_today_checkin_status（按 project_id 过滤）
- * - 义务起点：get_my_obligation_start RPC（PostgreSQL 按 00037 口径
- *   计算 owner 的 starts_at / 成员加入日是否顺延，前端不做墙钟换算）
+ * - 打卡历史：get_my_checkin_activity RPC（数据库仅返回本人记录；
+ *   DAL 按 500 条/页循环读全量，规避 Data API 1000 行上限）
+ * - 今日状态：get_today_checkin_status（按 project_id 过滤）
+ * - 义务起点：get_my_obligation_start RPC（owner 的 starts_at /
+ *   成员加入日是否顺延由 PostgreSQL 计算）
+ * - 日历/统计的纯计算在 @/lib/project-detail-calendar
  *
  * 口径：
- *   - "今天"、日历状态、统计、截止时间全部在服务端按项目时区计算
- *   - "缺卡"按自然日推算（不依赖 checkin_occurrences）
- *   - 生命周期：软删除项目返回 null（404）；归档项目统计终点截至
- *     archived_at 对应项目日期（不再新增应打/缺卡）；pending 项目
- *     （未开始）显示"项目未开始"
- *   - 打卡资格（eligibility）：active 项目 + 本人（owner 或 active 成员）
- *     + 未过截止。注：pending 成员被项目 RLS 挡在详情页外（读不到完整行），
- *     不存在"等待接受邀请"分支
- *   - 任一必需查询失败直接 throw，页面渲染统一失败态
+ *   - 软删除项目返回 null（404）；任一必需查询失败直接 throw，
+ *     页面渲染统一失败态
+ *   - 多人项目日历/统计口径为"我的记录"（isMyStatsOnly，页面标注）
+ *   - 统计起点 = max(本月 1 日, 义务起点)；终点 = min(今天, 月末, 归档日)
  */
-
-export type CalendarDayStatus =
-  | "checked" // 绿：active 正常打卡
-  | "makeup" // 黄：active 补卡
-  | "missed" // 红：过去应打未打（>= starts_at）
-  | "today" // 描边：今天且未打卡
-  | "none"; // 灰：未来 / starts_at 之前 / 月外补位
-
-export type CalendarDay = {
-  date: string; // YYYY-MM-DD（项目时区日历日）
-  inMonth: boolean;
-  status: CalendarDayStatus;
-};
 
 /** 今日打卡入口状态（详情页按钮按此渲染） */
 export type CheckinEligibility =
@@ -67,7 +112,17 @@ export type ProjectDetailData = {
     projectType: "personal" | "group";
     status: "pending" | "active" | "cancelled" | "archived";
     startsAt: string | null;
+    /** 有限次目标（null=无限次） */
+    targetCount: number | null;
   };
+  /** 有限次进度（个人=实时含当日已打卡未截止；团队=完成日数缓存列 00087） */
+  finiteProgress: { current: number; target: number } | null;
+  /** 当前用户是否 owner（个人项目取消入口等） */
+  isOwner: boolean;
+  /** 补卡余量（independent=本人额度；shared=团队共享池） */
+  makeupQuota:
+    | { kind: "independent"; used: number; limit: number }
+    | { kind: "shared"; remaining: number; limit: number };
   eligibility: CheckinEligibility;
   todayCheckinId: string | null;
   canRevoke: boolean;
@@ -78,6 +133,8 @@ export type ProjectDetailData = {
   calendarToday: string;
   /** 多人项目时统计口径为"我的记录"（页面需标注） */
   isMyStatsOnly: boolean;
+  /** 多人项目成员总览（00067 RPC）；个人项目为 null */
+  memberOverview: MemberOverview | null;
   stats: {
     monthChecked: number;
     monthDue: number;
@@ -89,30 +146,6 @@ export type ProjectDetailData = {
   };
 };
 
-function dateInTimeZone(tz: string, at: Date = new Date()): string {
-  // en-CA locale 恰好输出 YYYY-MM-DD
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(at);
-}
-
-function toYmd(y: number, m: number, d: number): string {
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-}
-
-/** 周一为 0 ... 周日为 6 */
-function weekdayMondayFirst(ymd: string): number {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
-}
-
-function daysInMonth(y: number, m: number): number {
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-}
-
 /** 返回 null = 项目不存在/不可见/已软删除；查询失败 throw */
 export async function getProjectDetailData(
   projectId: string,
@@ -123,14 +156,12 @@ export async function getProjectDetailData(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // 行类型已在文件头从生成的 Database 类型提取（不手写合同）
-
   // 阶段 1：仅项目可见性（RLS）——不存在/无权限/软删除在此返回 null（404）。
   // 不与其他请求并行，确保任何无关 RPC 故障都不会覆盖 404 契约
   const projectRes = await supabase
     .from("checkin_projects")
     .select(
-      "id,name,icon,color,reward_mode,reward_n_value,reward_amount,penalty_amount,deadline_time,timezone,project_type,status,starts_at,deleted_at,archived_at,owner_id",
+      "id,name,icon,color,reward_mode,reward_n_value,reward_amount,penalty_amount,deadline_time,timezone,project_type,status,starts_at,deleted_at,archived_at,owner_id,target_count,current_progress,makeup_count,makeup_type,shared_makeup_remaining",
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -151,8 +182,6 @@ export async function getProjectDetailData(
       .eq("project_id", projectId)
       .eq("user_id", user.id)
       .maybeSingle(),
-    // 义务起点由 PostgreSQL 按 00037 口径计算（owner=starts_at；
-    // 成员起点不早于 starts_at，加入晚于当日 deadline 则次日）
     supabase.rpc("get_my_obligation_start", {
       p_project_id: projectId,
     }),
@@ -185,6 +214,31 @@ export async function getProjectDetailData(
     if (page.length < PAGE_SIZE) break;
   }
 
+  // 本人 occurrence 终态（RLS user_id = auth.uid()）：Cron 处理后的
+  // missed / penalty_capped / exempted / waived 优先于自然日推算；
+  // revoked（撤销未重打）用于"截止后仍 revoked → 今日连续清零"判定
+  const occurrenceByDate = new Map<string, OccurrenceFinalStatus>();
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const pageRes = await supabase
+      .from("checkin_occurrences")
+      .select("status, period_start")
+      .eq("project_id", projectId)
+      .in("status", ["missed", "penalty_capped", "exempted", "revoked", "waived"])
+      .order("period_start", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    if (pageRes.error) {
+      throw new Error(`打卡状态加载失败: ${pageRes.error.message}`);
+    }
+    const page = pageRes.data ?? [];
+    for (const row of page) {
+      occurrenceByDate.set(
+        dateInTimeZone(p.timezone, new Date(row.period_start)),
+        row.status as OccurrenceFinalStatus,
+      );
+    }
+    if (page.length < PAGE_SIZE) break;
+  }
+
   const project: ProjectDetailData["project"] = {
     id: p.id,
     name: p.name,
@@ -199,12 +253,43 @@ export async function getProjectDetailData(
     projectType: p.project_type,
     status: p.status,
     startsAt: p.starts_at,
+    targetCount: p.target_count,
   };
 
   const memberRow = memberRes.data;
   const memberStatus = memberRow?.status ?? null;
   const isOwner = p.owner_id === user.id;
   const isActiveMember = memberStatus === "active";
+
+  // 补卡余量：independent = 本人已用（makeup_usages 权威计数，RLS 仅本人
+  // 行可见 00035）；shared = 团队共享池缓存列（00025 触发器维护）
+  let makeupUsed = 0;
+  if (p.makeup_type !== "shared") {
+    const usedRes = await supabase
+      .from("makeup_usages")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("user_id", user.id);
+    if (usedRes.error) {
+      throw new Error(`补卡记录加载失败: ${usedRes.error.message}`);
+    }
+    makeupUsed = usedRes.count ?? 0;
+  }
+
+  // 多人项目成员总览（个人项目跳过）
+  let memberOverview: MemberOverview | null = null;
+  if (p.project_type === "group") {
+    const overviewRes = await supabase.rpc("get_project_member_overview", {
+      p_project_id: projectId,
+    });
+    if (overviewRes.error) {
+      throw new Error(`成员总览加载失败: ${overviewRes.error.message}`);
+    }
+    const row = (overviewRes.data ?? [])[0];
+    if (row) {
+      memberOverview = parseMemberOverview(row);
+    }
+  }
 
   // ---- 今日状态与打卡资格（项目时区）----
   const todayRow = (todayRes.data ?? []).find(
@@ -224,7 +309,7 @@ export async function getProjectDetailData(
   let todayCheckinId: string | null = null;
   let canRevoke = false;
   if (p.status === "pending") {
-    eligibility = "not_started"; // starts_at 在未来
+    eligibility = "not_started";
   } else if (p.status !== "active") {
     eligibility = "ended";
   } else if (!isOwner && !isActiveMember) {
@@ -240,7 +325,7 @@ export async function getProjectDetailData(
     eligibility = "eligible";
   }
 
-  // ---- 日历与统计（项目时区；活动记录已由 RPC 限定为本人）----
+  // ---- 日历与统计（纯计算在 project-detail-calendar）----
   const [year, month] = tzToday.split("-").map(Number);
   const activeByDate = new Map<string, boolean>();
   let totalCount = 0;
@@ -250,74 +335,62 @@ export async function getProjectDetailData(
     totalCount += 1;
   }
 
-  const firstOfMonth = toYmd(year, month, 1);
-  // 统计起点：本月与本人义务起点（PostgreSQL 按 00037 口径计算：
-  // owner=starts_at；成员加入晚于当日 deadline 则从次日开始）取最晚
-  const obligationStart =
-    obligationRes.data ?? null;
+  // 有效完成日 = 本人 active 打卡 ∪ occurrence 终态 exempted
+  // （waived 不进有效日——与 DB 00082 streak"未定跳过"口径一致，
+  //  仅在月历作蓝格展示并计入完成率，见 project-detail-calendar）
+  const validDays = new Set<string>(activeByDate.keys());
+  for (const [ymd, status] of occurrenceByDate) {
+    if (status === "exempted") validDays.add(ymd);
+  }
+
+  // 统计起点：本月 1 日与义务起点取最晚；终点：今天/月末/归档日最早
+  const firstOfMonth = `${year}-${String(month).padStart(2, "0")}-01`;
+  const obligationStart = obligationRes.data ?? null;
   const statStart =
     obligationStart && obligationStart > firstOfMonth
       ? obligationStart
       : firstOfMonth;
-  const lastOfMonth = toYmd(year, month, daysInMonth(year, month));
-  // 统计终点：今天/月末/归档日（项目时区）三者最早
+  const lastOfMonth = `${year}-${String(month).padStart(2, "0")}-${String(
+    new Date(Date.UTC(year, month, 0)).getUTCDate(),
+  ).padStart(2, "0")}`;
   let statEnd = tzToday < lastOfMonth ? tzToday : lastOfMonth;
   if (p.archived_at != null) {
     const archivedDate = dateInTimeZone(p.timezone, new Date(p.archived_at));
     if (archivedDate < statEnd) statEnd = archivedDate;
   }
 
-  // 本人 streak（从本人 active 日期计算；项目级缓存字段是全体共享的，
-  // 多人项目不能代表当前成员）
-  let myCurrentStreak = 0;
-  {
-    let day = tzToday;
-    if (!activeByDate.has(day)) day = prevDay(day);
-    while (activeByDate.has(day)) {
-      myCurrentStreak += 1;
-      day = prevDay(day);
-    }
-  }
-  const myMaxStreak = longestRunOf([...activeByDate.keys()]);
-
-  let monthChecked = 0;
-  let monthDue = 0;
-
-  // 周一起始固定 42 格（6 行）
-  const leading = weekdayMondayFirst(firstOfMonth);
-  const calendar: CalendarDay[] = [];
-
-  for (let i = 0; i < 42; i++) {
-    const dayOfMonth = i - leading + 1;
-    if (dayOfMonth < 1 || dayOfMonth > daysInMonth(year, month)) {
-      calendar.push({ date: "", inMonth: false, status: "none" });
-      continue;
-    }
-    const ymd = toYmd(year, month, dayOfMonth);
-    let status: CalendarDayStatus;
-    if (activeByDate.has(ymd)) {
-      status = activeByDate.get(ymd) ? "makeup" : "checked";
-      if (ymd >= statStart) monthChecked += 1;
-    } else if (ymd < statStart) {
-      // 未开始（starts_at / 加入日之前，含 pending 项目的今天）：不产生任何标记
-      status = "none";
-    } else if (ymd > statEnd || ymd > tzToday) {
-      // 归档后或未来：不产生缺卡/待打卡
-      status = "none";
-    } else if (ymd === tzToday) {
-      status = "today";
-    } else {
-      status = "missed";
-    }
-    if (ymd >= statStart && ymd <= statEnd) monthDue += 1;
-    calendar.push({ date: ymd, inMonth: true, status });
-  }
-
+  const todayFailed = isTodayFailed(occurrenceByDate, tzToday, afterDeadline);
+  const { calendar, monthChecked, monthDue } = buildMonthCalendar({
+    year,
+    month,
+    today: tzToday,
+    activeByDate,
+    occurrenceByDate,
+    statStart,
+    statEnd,
+    todayFailed,
+  });
+  const { currentStreak, maxStreak } = computeMyStreaks(validDays, tzToday, todayFailed);
   const completionRate =
     monthDue > 0 ? Math.round((monthChecked / monthDue) * 100) : 0;
 
   return {
     project,
+    finiteProgress:
+      p.target_count != null
+        ? p.project_type === "personal"
+          ? { current: Math.min(activeByDate.size, p.target_count), target: p.target_count }
+          : { current: p.current_progress ?? 0, target: p.target_count }
+        : null,
+    isOwner,
+    makeupQuota:
+      p.makeup_type === "shared"
+        ? {
+            kind: "shared",
+            remaining: p.shared_makeup_remaining ?? p.makeup_count,
+            limit: p.makeup_count,
+          }
+        : { kind: "independent", used: makeupUsed, limit: p.makeup_count },
     eligibility,
     todayCheckinId,
     canRevoke,
@@ -326,34 +399,14 @@ export async function getProjectDetailData(
     calendarMonthLabel: `${year}年${month}月`,
     calendarToday: tzToday,
     isMyStatsOnly: p.project_type === "group",
+    memberOverview,
     stats: {
       monthChecked,
       monthDue,
       completionRate,
       totalCount,
-      currentStreak: myCurrentStreak,
-      maxStreak: myMaxStreak,
+      currentStreak,
+      maxStreak,
     },
   };
-}
-
-function prevDay(ymd: string): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  const ts = Date.UTC(y, m - 1, d) - 86400000;
-  const dt = new Date(ts);
-  return toYmd(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
-}
-
-/** gaps-and-islands：日期集合的最长连续段长度 */
-function longestRunOf(dates: string[]): number {
-  const sorted = [...new Set(dates)].sort();
-  let best = 0;
-  let run = 0;
-  let prev: string | null = null;
-  for (const d of sorted) {
-    run = prev != null && prevDay(d) === prev ? run + 1 : 1;
-    if (run > best) best = run;
-    prev = d;
-  }
-  return best;
 }

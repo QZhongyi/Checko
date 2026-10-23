@@ -4,25 +4,24 @@ import sunIcon from "@/assets/images/home-complete/sun.png";
 import { CoinIcon } from "@/components/ui/coin-icon";
 
 /**
- * 首页 Header（home-ui-spec.md §5）
+ * 首页 Header（首页设计图_prompt.md §4.1 顶部区）
  *
  * 结构：
  *   Greeting (SunIcon + 文本 + WaveIcon)
  *   Date?
  *   CoinPill (右侧)
  *
- * CoinPill 三种变体：normal / empty / debt（由 props 控制）
+ * CoinPill 两种变体：normal / debt（由 props 控制）。
+ * 空态不改变余额数值：EMPTY 只是"暂无进行中的项目"，不得把真实余额改写成 0。
  */
 export function HomeHeader({
   nickname,
   walletBalance,
   debtAmount,
-  isEmpty,
 }: {
   nickname?: string | null;
   walletBalance: number;
   debtAmount: number;
-  isEmpty?: boolean;
 }) {
   const greeting = greetingText(nickname);
   const dateText = formatDate(new Date());
@@ -52,7 +51,6 @@ export function HomeHeader({
         <CoinPill
           walletBalance={walletBalance}
           debtAmount={debtAmount}
-          isEmpty={isEmpty}
         />
       </Link>
     </header>
@@ -62,13 +60,11 @@ export function HomeHeader({
 function CoinPill({
   walletBalance,
   debtAmount,
-  isEmpty,
 }: {
   walletBalance: number;
   debtAmount: number;
-  isEmpty?: boolean;
 }) {
-  // 优先级：debt > empty > normal
+  // 优先级：debt > normal（空态不改写余额数值，只影响页面其他区域的呈现）
   if (debtAmount > 0) {
     return (
       <div
@@ -83,15 +79,6 @@ function CoinPill({
         <span className="text-lg font-bold leading-none">
           {debtAmount}
         </span>
-      </div>
-    );
-  }
-
-  if (isEmpty) {
-    return (
-      <div className="flex h-12 min-w-[88px] items-center gap-1.5 rounded-[22px] bg-white px-4 shadow-[0_6px_18px_rgba(0,0,0,0.05)]">
-        <CoinIcon size={20} className="grayscale opacity-50" />
-        <span className="text-sm font-bold text-[#707789]">0 金币</span>
       </div>
     );
   }

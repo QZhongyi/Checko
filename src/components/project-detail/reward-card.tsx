@@ -11,6 +11,7 @@ export function RewardCard({
   penaltyAmount,
   deadlineTime,
   timezone,
+  poolPerSettlement,
 }: {
   rewardMode: RewardMode;
   rewardNValue: number | null;
@@ -18,6 +19,8 @@ export function RewardCard({
   penaltyAmount: number;
   deadlineTime: string;
   timezone: string;
+  /** 多人项目结算池（传入即按团队口径展示，0 为合法池值） */
+  poolPerSettlement?: number;
 }) {
   const rewardText = rewardLabel(rewardMode, rewardAmount, rewardNValue);
   const rewardTitle =
@@ -35,10 +38,12 @@ export function RewardCard({
       <div className="mt-3 flex flex-col gap-3">
         <div className="flex items-center justify-between rounded-2xl bg-[#FFF7E0] px-4 py-3">
           <span className="text-[15px] font-medium text-[var(--color-text-primary-2)]">
-            {rewardTitle}
+            {poolPerSettlement != null
+              ? "每次完成结算（团队平分）"
+              : rewardTitle}
           </span>
           <span className="flex items-center gap-1 text-[17px] font-bold text-[var(--color-coin-yellow)]">
-            +{rewardAmount}
+            +{poolPerSettlement != null ? poolPerSettlement : rewardAmount}
             <CoinIcon size={16} />
           </span>
         </div>
@@ -53,8 +58,10 @@ export function RewardCard({
         </div>
       </div>
       {rewardMode !== "every_time" ? (
-        <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
-          奖励由结算任务发放，非打卡即时到账（{rewardText}）
+        <p className="mt-3 text-xs leading-5 text-[var(--color-text-secondary)]">
+          {rewardMode === "every_n"
+            ? `第 ${rewardNValue ?? "N"} 次打卡成功时发放（${rewardText}）`
+            : `达成全部目标归档时一次性发放（${rewardText}）`}
         </p>
       ) : null}
       <p className="mt-3 text-xs text-[var(--color-text-secondary)]">

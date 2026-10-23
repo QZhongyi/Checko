@@ -199,3 +199,88 @@ export async function deleteFriendshipAction(
   revalidatePath("/friends");
   return { success: true, friendshipId };
 }
+
+/** 动态互动（00090）结果归属键：`{targetType}:{targetId}` 或 `{userId}` */
+export type FeedInteractionState =
+  | { error?: string; success?: boolean; targetKey?: string }
+  | undefined;
+
+const FEED_BUSINESS_ERRORS = [
+  "未登录",
+  "点赞目标不能为空",
+  "无效的点赞目标类型",
+  "只能点赞好友的动态",
+  "目标用户不能为空",
+  "不能催自己打卡",
+  "只有好友可以催打卡",
+  "对方今日没有待完成的打卡",
+  "24小时内已提醒过，明天再来看看",
+];
+
+function toFeedUserMessage(message: string): string {
+  if (FEED_BUSINESS_ERRORS.some((prefix) => message.startsWith(prefix))) {
+    return message;
+  }
+  console.error("feed RPC 未知错误:", message);
+  return "操作失败，请稍后重试";
+}
+
+/**
+ * 点赞 toggle（toggle_activity_like，00090）。可见性由 RPC 强制
+ * （仅好友的动态可赞）；成功后 revalidate 刷新服务端 like 状态。
+ */
+export async function toggleActivityLikeAction(
+  _state: FeedInteractionState,
+  formData: FormData,
+): Promise<FeedInteractionState> {
+  const targetType = String(formData.get("targetType") ?? "").trim();
+  const targetId = String(formData.get("targetId") ?? "").trim();
+  if (
+    (targetType !== "checkin" && targetType !== "achievement") ||
+    !UUID_RE.test(targetId)
+  ) {
+    return { error: "参数无效", targetKey: `${targetType}:${targetId}` };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("toggle_activity_like", {
+    p_target_type: targetType,
+    p_target_id: targetId,
+  });
+
+  if (error) {
+    return {
+      error: toFeedUserMessage(error.message),
+      targetKey: `${targetType}:${targetId}`,
+    };
+  }
+
+  revalidatePath("/friends");
+  return { success: true, targetKey: `${targetType}:${targetId}` };
+}
+
+/**
+ * 催打卡（nudge_friend，00090）：好友关系 + 今日未完成义务 + 24h 冷却
+ * 均由 RPC 强制；成功后服务端 nudged 翻转按钮为"已提醒"态。
+ */
+export async function nudgeFriendAction(
+  _state: FeedInteractionState,
+  formData: FormData,
+): Promise<FeedInteractionState> {
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!UUID_RE.test(userId)) {
+    return { error: "参数无效", targetKey: userId };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("nudge_friend", {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    return { error: toFeedUserMessage(error.message), targetKey: userId };
+  }
+
+  revalidatePath("/friends");
+  return { success: true, targetKey: userId };
+}

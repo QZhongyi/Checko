@@ -8,14 +8,14 @@ import raysLeft from "@/assets/images/home-complete/completion-rays-left.png";
 import raysRight from "@/assets/images/home-complete/completion-rays-right.png";
 
 /**
- * 首页 Hero 区域（home-ui-spec.md §10 / §11 / §12）
+ * 首页 Hero 区域（首页设计图_prompt.md §4.1 余额 pill / §4.2 Hero 进度卡）
  *
  * 三种 variant：
  *   - active：绿色进度环 + 正常火焰 + "今日 N/M 习惯已打卡"
  *   - debt：三段色环 + 灰色疲惫火焰 + 警示
  *   - completed：彩色环 + 庆祝文案（左右放射线）+ 笑脸火焰 + sprite 装饰
  *
- * EMPTY 状态不渲染 Hero（§13）。
+ * EMPTY 状态不渲染 Hero（首页特殊状态_prompt.md 状态 1）。
  */
 
 /** sprite 原始网格为 64px，按 50% 缩放显示 */

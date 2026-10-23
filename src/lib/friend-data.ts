@@ -50,6 +50,33 @@ export type FriendData = {
   pendingReceivedCount: number;
 };
 
+/** 邀请成员弹窗用：我的好友（昵称 + 头像，不带聚合） */
+export type InvitableFriend = {
+  userId: string;
+  nickname: string | null;
+  avatar: string | null;
+};
+
+export async function getInvitableFriends(): Promise<InvitableFriend[]> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("get_my_friends");
+  if (error) {
+    throw new Error(`好友列表加载失败: ${error.message}`);
+  }
+  return (data ?? []).map((row: FriendRow) => ({
+    userId: row.user_id,
+    nickname: row.nickname,
+    avatar: row.avatar,
+  }));
+}
+
 export async function getFriendData(): Promise<FriendData> {
   const supabase = await createSupabaseServerClient();
   const {
@@ -127,7 +154,32 @@ export type LeaderboardEntry = {
   totalSpent: number;
 };
 
-export async function getLeaderboardData(): Promise<{
+/** 金额排行榜维度（v2.0）：余额 / 累计收入 / 净金额（= 累计收入 - 累计消费） */
+export type LeaderboardDimension = "balance" | "earned" | "net";
+
+export function isLeaderboardDimension(
+  value: string | undefined,
+): value is LeaderboardDimension {
+  return value === "balance" || value === "earned" || value === "net";
+}
+
+/** 排序值：与 RankTab 展示值保持同一口径 */
+export function leaderboardMetric(
+  entry: LeaderboardEntry,
+  dimension: LeaderboardDimension,
+): number {
+  if (dimension === "earned") {
+    return entry.totalEarned;
+  }
+  if (dimension === "net") {
+    return entry.totalEarned - entry.totalSpent;
+  }
+  return entry.walletBalance;
+}
+
+export async function getLeaderboardData(
+  dimension: LeaderboardDimension = "balance",
+): Promise<{
   entries: LeaderboardEntry[];
   myUserId: string | null;
 }> {
@@ -155,8 +207,55 @@ export async function getLeaderboardData(): Promise<{
       totalSpent: row.total_spent,
     }))
     .sort(
-      (a, b) => b.walletBalance - a.walletBalance || a.userId.localeCompare(b.userId),
+      (a, b) =>
+        leaderboardMetric(b, dimension) - leaderboardMetric(a, dimension) ||
+        a.userId.localeCompare(b.userId),
     );
 
   return { entries, myUserId: user.id };
+}
+
+export type TeamLeaderboardEntry = {
+  projectId: string;
+  projectName: string;
+  projectIcon: string | null;
+  projectColor: string | null;
+  memberCount: number;
+  teamBalance: number;
+};
+
+/** 团队排行榜（v2.0）：我参与的多人项目按团队整体余额聚合（00042 RPC） */
+export async function getTeamLeaderboardData(): Promise<
+  TeamLeaderboardEntry[]
+> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("get_my_team_leaderboard");
+  if (error) {
+    throw new Error(`团队排行榜加载失败: ${error.message}`);
+  }
+
+  const entries: TeamLeaderboardEntry[] = (data ?? []).map(
+    (row: Db["Functions"]["get_my_team_leaderboard"]["Returns"][number]) => ({
+      projectId: row.project_id,
+      projectName: row.project_name,
+      projectIcon: row.project_icon,
+      projectColor: row.project_color,
+      memberCount: row.member_count,
+      teamBalance: row.team_balance,
+    }),
+  );
+
+  entries.sort(
+    (a, b) =>
+      b.teamBalance - a.teamBalance || a.projectId.localeCompare(b.projectId),
+  );
+
+  return entries;
 }
